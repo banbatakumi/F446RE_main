@@ -20,8 +20,8 @@ void cam_rx();
 
 // ピン定義
 voltage Voltage(PA_4);
-motor Motor(PC_6, PC_8, PB_14, PB_15, PB_2, PB_10, PB_3, PB_5);
-dribbler Dribbler(PB_8, PB_9, PB_6, PB_7);
+motor Motor(PC_8, PC_6, PB_3, PB_5, PB_10, PB_2, PB_15, PB_14);
+dribbler Dribbler(PB_6, PB_7, PB_8, PB_9);
 hold Hold(PC_5, PC_4);
 
 DigitalOut led_1(PA_5);
@@ -30,22 +30,30 @@ DigitalOut led_2(PA_6);
 // グローバル変数定義
 int16_t yaw;
 
+Timer test;
+
 int main() {
       // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
+
       line.baud(38400);
       line.attach(line_rx, Serial::RxIrq);
       imu.baud(38400);
-      imu.attach(imu_rx, Serial::RxIrq);
+      // imu.attach(imu_rx, Serial::RxIrq);
       ui.baud(38400);
       ui.attach(ui_rx, Serial::RxIrq);
       lidar.baud(38400);
       lidar.attach(lidar_rx, Serial::RxIrq);
       cam.baud(38400);
       cam.attach(cam_rx, Serial::RxIrq);
+      test.start();
+
+      Motor.set_pwm();
+      Dribbler.set_pwm();
 
       while (1) {
             Voltage.read();
             Motor.yaw = yaw;
+            Dribbler.b_hold(100);
       }
 }
 
