@@ -23,18 +23,18 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
       if (move_speed > POWER_LIMIT) {
             move_speed = POWER_LIMIT;   // 速度が上限を超えていないか
       }
-      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             power[i] = sin((move_angle - (45 + i * 90)) * PI / 180.00000) * move_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
       maximum_power = 0;
-      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             if (maximum_power < abs(power[i])) {
                   maximum_power = abs(power[i]);
             }
       }
-      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             power[i] *= float(move_speed) / maximum_power;
       }
 
@@ -62,7 +62,7 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
 
       // 移動平均フィルタ
       if (moving_average_count == MOVING_AVERAGE_COUNT_NUMBER) moving_average_count = 0;
-      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             if (robot_angle == 0 || shoot_robot_angle != 0) {
                   power[i] += i < 2 ? -pid : pid;
             } else if (i == 1 || i == 2) {

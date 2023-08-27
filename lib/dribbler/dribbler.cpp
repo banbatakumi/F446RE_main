@@ -77,3 +77,10 @@ void dribbler::b_stop() {
       b_motor_1 = 0;
       b_motor_2 = 0;
 }
+
+void dribbler::stop() {
+      f_motor_1 = 0;
+      f_motor_2 = 0;
+      b_motor_1 = 0;
+      b_motor_2 = 0;
+}

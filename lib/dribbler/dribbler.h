@@ -21,6 +21,8 @@ class dribbler {
       void b_kick();
       void b_stop();
 
+      void stop();
+
      private:
       PwmOut f_motor_1;
       DigitalOut f_motor_2;
