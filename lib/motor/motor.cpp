@@ -20,15 +20,23 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
       angle = move_angle;
       speed = move_speed;
 
-      if (move_speed > POWER_LIMIT) move_speed = POWER_LIMIT;   // 速度が上限を超えていないか
-      for (uint8_t count = 0; count < MOTOR_NUM; count++) power[count] = sin((move_angle - (45 + count * 90)) * PI / 180.00000) * move_speed * (count < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+      if (move_speed > POWER_LIMIT) {
+            move_speed = POWER_LIMIT;   // 速度が上限を超えていないか
+      }
+      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+            power[i] = sin((move_angle - (45 + i * 90)) * PI / 180.00000) * move_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+      }
 
       // モーターの最大パフォーマンス発揮
       maximum_power = 0;
-      for (uint8_t count = 0; count < MOTOR_NUM; count++) {
-            if (maximum_power < abs(power[count])) maximum_power = abs(power[count]);
+      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+            if (maximum_power < abs(power[i])) {
+                  maximum_power = abs(power[i]);
+            }
       }
-      for (uint8_t count = 0; count < MOTOR_NUM; count++) power[count] *= float(move_speed) / maximum_power;
+      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
+            power[i] *= float(move_speed) / maximum_power;
+      }
 
       // PID姿勢制御
       p = robot_angle - yaw;   // 比例
@@ -48,22 +56,28 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
       }
 
       pid = p * KP + i * KI + d * KD;
-      if (abs(pid) > PD_LIMIT) pid = PD_LIMIT * (abs(pid) / pid);
+      if (abs(pid) > PD_LIMIT) {
+            pid = PD_LIMIT * (abs(pid) / pid);
+      }
 
       // 移動平均フィルタ
       if (moving_average_count == MOVING_AVERAGE_COUNT_NUMBER) moving_average_count = 0;
-      for (uint8_t count = 0; count < MOTOR_NUM; count++) {
+      for (uint8_t i = 0; i < MOTOR_NUM; i++) {
             if (robot_angle == 0 || shoot_robot_angle != 0) {
-                  power[count] += count < 2 ? -pid : pid;
-            } else if (count == 1 || count == 2) {
-                  power[count] += count < 2 ? -pid * 2 : pid * 2;
+                  power[i] += i < 2 ? -pid : pid;
+            } else if (i == 1 || i == 2) {
+                  power[i] += i < 2 ? -pid * 2 : pid * 2;
             }
-            if (abs(power[count]) > POWER_LIMIT) power[count] = POWER_LIMIT * (abs(power[count]) / power[count]);   // モーターの上限値超えた場合の修正
+            if (abs(power[i]) > POWER_LIMIT) {
+                  power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);   // モーターの上限値超えた場合の修正
+            }
 
-            tmp_power[count][moving_average_count] = power[count];
-            power[count] = 0;
-            for (uint8_t count_1 = 0; count_1 < MOVING_AVERAGE_COUNT_NUMBER; count_1++) power[count] += tmp_power[count][count_1];
-            power[count] /= MOVING_AVERAGE_COUNT_NUMBER;
+            tmp_power[i][moving_average_count] = power[i];
+            power[i] = 0;
+            for (uint8_t j = 0; j < MOVING_AVERAGE_COUNT_NUMBER; j++) {
+                  power[i] += tmp_power[i][j];
+            }
+            power[i] /= MOVING_AVERAGE_COUNT_NUMBER;
       }
       moving_average_count++;
 
