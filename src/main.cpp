@@ -34,29 +34,31 @@ DigitalOut led_2(PA_6);
 // グローバル変数定義
 int16_t yaw = 0, yaw_correction = 0;
 uint8_t tof_value[16];
+uint8_t encoder[4];
 uint8_t mode = 0;
 uint8_t moving_speed;
+uint8_t test;
 
-Timer test;
+Timer test_t;
 
 int main() {
       // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 
-      // line.baud(38400);
-      // line.attach(line_rx, Serial::RxIrq);
-      imu.baud(38400);
+      line.baud(14400);
+      line.attach(line_rx, Serial::RxIrq);
+      imu.baud(57600);
       imu.attach(imu_rx, Serial::RxIrq);
-      ui.baud(38400);
+      ui.baud(57600);
       ui.attach(ui_rx, Serial::RxIrq);
-      lidar.baud(9600);
+      lidar.baud(57600);
       lidar.attach(lidar_rx, Serial::RxIrq);
       // cam.baud(38400);
       // cam.attach(cam_rx, Serial::RxIrq);
 
-      test.start();
-
       Motor.set_pwm();
       Dribbler.set_pwm();
+      float speed = 20;
+      test_t.start();
 
       while (1) {
             Voltage.read();
@@ -64,12 +66,21 @@ int main() {
 
             if (mode == 0) {
                   Motor.free();
+                  // Motor.run(0, 0);
             } else if (mode == 1) {
-                  Motor.run(0, 0);
+                  if (test_t.read() > 0.01) {
+                        speed -= ((test - 5) * 0.5);
+
+                        test_t.reset();
+                  }
+
+                  if (speed < 0) speed = 0;
+                  if (speed > 100) speed = 100;
+                  Motor.run(0, speed);
             } else if (mode == 2) {
-                  if(Tof.value[Tof.min_sensor()] < 100){
-                        Motor.run(Tof.safe_angle(), (200 - Tof.value[Tof.min_sensor()]) / 2.5);
-                  }else{
+                  if (Tof.value[Tof.min_sensor()] < 100) {
+                        Motor.run(Tof.min_sensor() * 22.5 - 180, (200 - Tof.value[Tof.min_sensor()]) / 3);
+                  } else {
                         Motor.run(0, 0);
                   }
             }
@@ -77,10 +88,16 @@ int main() {
 }
 
 void line_rx() {
+      if (line.getc() == 'H') {
+            encoder[0] = line.getc();
+            encoder[1] = line.getc();
+            encoder[2] = line.getc();
+            encoder[3] = line.getc();
+      }
 }
 
 void imu_rx() {
-      if (imu.getc() == 'a') {
+      if (imu.getc() == 'H') {
             uint8_t yaw_plus = imu.getc();
             uint8_t yaw_minus = imu.getc();
 
@@ -93,10 +110,6 @@ void imu_rx() {
 void ui_rx() {
       int8_t item = 0;
       uint8_t dribbler_sig = 0;
-      uint8_t yaw_plus = yaw > 0 ? yaw : 0;
-      uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
-      uint8_t safe_angle_plus = Tof.safe_angle() > 0 ? Tof.safe_angle() : 0;
-      uint8_t safe_angle_minus = Tof.safe_angle() < 0 ? Tof.safe_angle() * -1 : 0;
 
       if (ui.getc() == 'H') {
             item = ui.getc() - 10;
@@ -124,14 +137,21 @@ void ui_rx() {
             }
       }
 
-      if (item == 1) {
+      if (item == 0) {
+            ui.putc(encoder[0]);
+      } else if (item == 1) {
+            uint8_t yaw_plus = yaw > 0 ? yaw : 0;
+            uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
             ui.putc('H');
             ui.putc(yaw_plus);
             ui.putc(yaw_minus);
       } else if (item == 2) {
+            uint8_t safe_angle_plus = Tof.safe_angle() > 0 ? Tof.safe_angle() : 0;
+            uint8_t safe_angle_minus = Tof.safe_angle() < 0 ? Tof.safe_angle() * -1 : 0;
             ui.putc('H');
             ui.putc(safe_angle_plus);
             ui.putc(safe_angle_minus);
+            ui.putc(Tof.min_sensor());
             for (int i = 0; i < 16; i++) {
                   ui.putc(Tof.value[i]);
             }

@@ -17,9 +17,6 @@ motor::motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName
 }
 
 void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, bool shoot_robot_angle) {
-      angle = move_angle;
-      speed = move_speed;
-
       if (move_speed > POWER_LIMIT) {
             move_speed = POWER_LIMIT;   // 速度が上限を超えていないか
       }
@@ -28,14 +25,14 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
       }
 
       // モーターの最大パフォーマンス発揮
-      maximum_power = 0;
+      uint8_t max_power = 0;
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (maximum_power < abs(power[i])) {
-                  maximum_power = abs(power[i]);
+            if (max_power < abs(power[i])) {
+                  max_power = abs(power[i]);
             }
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] *= float(move_speed) / maximum_power;
+            power[i] *= float(move_speed) / max_power;
       }
 
       // PID姿勢制御
@@ -137,10 +134,4 @@ int16_t motor::motor_3() {
 }
 int16_t motor::motor_4() {
       return power[3];
-}
-int16_t motor::move_angle() {
-      return angle;
-}
-int16_t motor::move_speed() {
-      return speed;
 }

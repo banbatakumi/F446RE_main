@@ -23,7 +23,7 @@ int16_t tof::safe_angle() {
 }
 
 uint8_t tof::min_sensor() {
-      uint min_value_sensor = 0;
+      uint8_t min_value_sensor = 0;
       uint8_t min_value = value[0];
 
       for (uint8_t i = 0; i < TOF_QTY; i++) {

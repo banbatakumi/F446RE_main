@@ -16,8 +16,7 @@ class hold {
       AnalogIn front;
       AnalogIn back;
 
-      uint8_t front_value, front_rc_value;
-      uint8_t back_value, back_rc_value;
+      uint8_t front_rc_value, back_rc_value;
 };
 
 #endif

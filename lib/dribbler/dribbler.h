@@ -3,7 +3,7 @@
 
 #include "mbed.h"
 
-#define MOTOR_FREQUENCY 25000   // モーターのPWM周波数
+#define MOTOR_FREQUENCY 30000   // モーターのPWM周波数
 
 class dribbler {
      public:
