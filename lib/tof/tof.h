@@ -13,7 +13,7 @@ class tof {
       int16_t safe_angle();
       uint8_t min_sensor();
 
-      uint8_t value[TOF_QTY];
+      uint8_t val[TOF_QTY];
 
      private:
       float unit_vector_x[TOF_QTY];

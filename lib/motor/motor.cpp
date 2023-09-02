@@ -12,16 +12,34 @@ motor::motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName
       motor_4_1 = 0;
       motor_4_2 = 0;
 
-      i_timer.start();
       d_timer.start();
 }
 
-void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, bool shoot_robot_angle) {
-      if (move_speed > POWER_LIMIT) {
-            move_speed = POWER_LIMIT;   // 速度が上限を超えていないか
+void motor::run(bool is_encoder, int16_t move_angle, uint8_t move_speed, int16_t robot_angle, uint8_t robot_angle_mode) {
+      static float speed = 0;
+      if (is_encoder == 1) {
+            encoder_cycle_timer.start();
+            if (encoder_cycle_timer.read() > ENCODER_CYCLE) {
+                  encoder_p = rotation_num_avg - move_speed;
+                  encoder_d = (encoder_p - encoder_pre_p) * encoder_cycle_timer.read();   // 微分
+                  encoder_pre_p = encoder_p;
+                  encoder_pd = encoder_p * ENCODER_KP + encoder_d * ENCODER_KD;
+                  speed -= encoder_pd;
+                  encoder_cycle_timer.reset();
+            }
+      } else {
+            encoder_cycle_timer.stop();
+            speed = move_speed;
       }
+      if (speed < 0) {
+            speed = 0;
+      }
+      if (speed > POWER_LIMIT) {
+            speed = POWER_LIMIT;
+      }
+
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = sin((move_angle - (45 + i * 90)) * PI / 180.00000) * move_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = sin((move_angle - (45 + i * 90)) * PI / 180.00000) * speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -32,51 +50,57 @@ void motor::run(int16_t move_angle, int16_t move_speed, int16_t robot_angle, boo
             }
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] *= float(move_speed) / max_power;
+            // power[i] *= float(move_speed) / max_power;
       }
 
-      // PID姿勢制御
+      // PD姿勢制御
       p = robot_angle - yaw;   // 比例
       if (p > 180) p -= 360;
       if (p < -180) p += 360;
-
-      if (i_timer.read() > I_PERIODO) {   // Iのリセット
-            i = 0;
-            i_timer.reset();
-      }
-
       if (d_timer.read() > D_PERIODO) {
-            i += p * d_timer.read();   // 積分
             d = (p - pre_p) * d_timer.read();   // 微分
             pre_p = p;
             d_timer.reset();
       }
+      pd = p * KP + d * KD;
 
-      pid = p * KP + i * KI + d * KD;
-      if (abs(pid) > PD_LIMIT) {
-            pid = PD_LIMIT * (abs(pid) / pid);
-      }
-
-      // 移動平均フィルタ
-      if (moving_average_count == MOVING_AVERAGE_COUNT_NUMBER) moving_average_count = 0;
+      if (moving_avg_cnt == MOVING_AVG_CNT_NUM) moving_avg_cnt = 0;
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (robot_angle == 0 || shoot_robot_angle != 0) {
-                  power[i] += i < 2 ? -pid : pid;
-            } else if (i == 1 || i == 2) {
-                  power[i] += i < 2 ? -pid * 2 : pid * 2;
-            }
-            if (abs(power[i]) > POWER_LIMIT) {
-                  power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);   // モーターの上限値超えた場合の修正
+            // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
+            if (robot_angle_mode == 0) {
+                  power[i] += i < 2 ? -pd : pd;
+            } else if (robot_angle_mode == 1) {
+                  if (i == 1 || i == 2) {
+                        power[i] += i < 2 ? -pd : pd;
+                  }
+            } else if (robot_angle_mode == 2) {
+                  if (i == 2 || i == 3) {
+                        power[i] += i < 2 ? -pd : pd;
+                  }
+            } else if (robot_angle_mode == 3) {
+                  if (i == 0 || i == 3) {
+                        power[i] += i < 2 ? -pd : pd;
+                  }
+            } else if (robot_angle_mode == 4) {
+                  if (i == 0 || i == 1) {
+                        power[i] += i < 2 ? -pd : pd;
+                  }
             }
 
-            tmp_power[i][moving_average_count] = power[i];
+            // モーターの上限値を超えた場合の修正
+            if (abs(power[i]) > POWER_LIMIT) {
+                  power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);
+            }
+
+            // 移動平均フィルタ
+            tmp_power[i][moving_avg_cnt] = power[i];
             power[i] = 0;
-            for (uint8_t j = 0; j < MOVING_AVERAGE_COUNT_NUMBER; j++) {
+            for (uint8_t j = 0; j < MOVING_AVG_CNT_NUM; j++) {
                   power[i] += tmp_power[i][j];
             }
-            power[i] /= MOVING_AVERAGE_COUNT_NUMBER;
+            power[i] /= MOVING_AVG_CNT_NUM;
       }
-      moving_average_count++;
+      moving_avg_cnt++;
 
       // モーターへ出力
       motor_1_1 = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);

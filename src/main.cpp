@@ -6,6 +6,8 @@
 #include "voltage.h"
 
 #define PI 3.1415926535   // 円周率
+#define CUT_VOLTAGE 6.0
+#define VOLTAGE_COUNT_NUM 1000
 
 // UART通信定義 (TX, RX)
 Serial line(PA_2, PA_3);
@@ -33,55 +35,65 @@ DigitalOut led_2(PA_6);
 
 // グローバル変数定義
 int16_t yaw = 0, yaw_correction = 0;
-uint8_t tof_value[16];
-uint8_t encoder[4];
+uint8_t tof_val[16];
+uint8_t motor_rotaion_number[4];
+uint8_t motor_rotation_num_avg;
 uint8_t mode = 0;
 uint8_t moving_speed;
-uint8_t test;
 
-Timer test_t;
+bool voltage_decrease = 0;
+uint16_t voltage_count;
+
+Timer test;
 
 int main() {
       // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 
-      line.baud(14400);
-      line.attach(line_rx, Serial::RxIrq);
+      line.baud(38400);
+      // line.attach(line_rx, Serial::RxIrq);
       imu.baud(57600);
       imu.attach(imu_rx, Serial::RxIrq);
-      ui.baud(57600);
+      ui.baud(38400);
       ui.attach(ui_rx, Serial::RxIrq);
-      lidar.baud(57600);
+      lidar.baud(38400);
       lidar.attach(lidar_rx, Serial::RxIrq);
-      // cam.baud(38400);
+      cam.baud(38400);
       // cam.attach(cam_rx, Serial::RxIrq);
 
       Motor.set_pwm();
       Dribbler.set_pwm();
-      float speed = 20;
-      test_t.start();
 
       while (1) {
             Voltage.read();
-            Motor.yaw = yaw;
 
-            if (mode == 0) {
+            if (Voltage.get_voltage() < CUT_VOLTAGE) {
+                  voltage_count++;
+            } else {
+                  voltage_count = 0;
+            }
+            if (voltage_count >= VOLTAGE_COUNT_NUM) {
+                  voltage_decrease = 1;
+            }
+            if (voltage_decrease == 1) {
                   Motor.free();
-                  // Motor.run(0, 0);
-            } else if (mode == 1) {
-                  if (test_t.read() > 0.01) {
-                        speed -= ((test - 5) * 0.5);
+                  ui.putc('E');
+                  ui.putc('R');
+            } else {
+                  Motor.yaw = yaw;
+                  Motor.rotation_num_avg = motor_rotation_num_avg;
+                  line_rx();
 
-                        test_t.reset();
-                  }
-
-                  if (speed < 0) speed = 0;
-                  if (speed > 100) speed = 100;
-                  Motor.run(0, speed);
-            } else if (mode == 2) {
-                  if (Tof.value[Tof.min_sensor()] < 100) {
-                        Motor.run(Tof.min_sensor() * 22.5 - 180, (200 - Tof.value[Tof.min_sensor()]) / 3);
-                  } else {
-                        Motor.run(0, 0);
+                  if (mode == 0) {
+                        Motor.free();
+                        // Motor.run(0, 0, 0);
+                  } else if (mode == 1) {
+                        Motor.run(1, 0, 15);
+                  } else if (mode == 2) {
+                        if (Tof.val[Tof.min_sensor()] < 100) {
+                              Motor.run(0, Tof.min_sensor() * 22.5 - 180, (200 - Tof.val[Tof.min_sensor()]) / 3);
+                        } else {
+                              Motor.run(0, 0, 0);
+                        }
                   }
             }
       }
@@ -89,10 +101,13 @@ int main() {
 
 void line_rx() {
       if (line.getc() == 'H') {
-            encoder[0] = line.getc();
-            encoder[1] = line.getc();
-            encoder[2] = line.getc();
-            encoder[3] = line.getc();
+            for (int i = 0; i < 4; i++) {
+                  motor_rotaion_number[i] = line.getc();
+            }
+      }
+      motor_rotation_num_avg = 0;
+      for (int i = 0; i < 3; i++) {
+            motor_rotation_num_avg += motor_rotaion_number[i] / 3;
       }
 }
 
@@ -124,11 +139,11 @@ void ui_rx() {
             } else if (item == -2) {
                   dribbler_sig = ui.getc();
                   if (dribbler_sig == 1) {
-                        Dribbler.f_hold(80);
+                        Dribbler.f_hold(90);
                   } else if (dribbler_sig == 2) {
                         Dribbler.f_kick();
                   } else if (dribbler_sig == 3) {
-                        Dribbler.b_hold(80);
+                        Dribbler.b_hold(90);
                   } else if (dribbler_sig == 4) {
                         Dribbler.b_kick();
                   } else {
@@ -137,8 +152,9 @@ void ui_rx() {
             }
       }
 
-      if (item == 0) {
-            ui.putc(encoder[0]);
+      if (item == 0 && mode == 0) {
+            ui.putc('H');
+            ui.putc(uint8_t(Voltage.get_voltage() * 10));
       } else if (item == 1) {
             uint8_t yaw_plus = yaw > 0 ? yaw : 0;
             uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
@@ -152,16 +168,16 @@ void ui_rx() {
             ui.putc(safe_angle_plus);
             ui.putc(safe_angle_minus);
             ui.putc(Tof.min_sensor());
-            for (int i = 0; i < 16; i++) {
-                  ui.putc(Tof.value[i]);
+            for (uint8_t i = 0; i < 16; i++) {
+                  ui.putc(Tof.val[i]);
             }
       }
 }
 
 void lidar_rx() {
       if (lidar.getc() == 'H') {
-            for (int i = 0; i < 16; i++) {
-                  Tof.value[i] = lidar.getc();
+            for (uint8_t i = 0; i < 16; i++) {
+                  Tof.val[i] = lidar.getc();
             }
       }
 }
