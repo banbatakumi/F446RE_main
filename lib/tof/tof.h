@@ -10,7 +10,7 @@
 class tof {
      public:
       tof();
-      int16_t safe_angle();
+      int16_t safe_dir();
       uint8_t min_sensor();
 
       uint8_t val[TOF_QTY];

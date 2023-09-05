@@ -7,7 +7,7 @@
 
 #define PI 3.1415926535   // 円周率
 #define CUT_VOLTAGE 6.0
-#define VOLTAGE_COUNT_NUM 1000
+#define VOLTAGE_CNT_NUM 1000
 
 // UART通信定義 (TX, RX)
 Serial line(PA_2, PA_3);
@@ -36,13 +36,22 @@ DigitalOut led_2(PA_6);
 // グローバル変数定義
 int16_t yaw = 0, yaw_correction = 0;
 uint8_t tof_val[16];
-uint8_t motor_rotaion_number[4];
+uint8_t motor_rotation_num[4];
 uint8_t motor_rotation_num_avg;
 uint8_t mode = 0;
 uint8_t moving_speed;
 
-bool voltage_decrease = 0;
-uint16_t voltage_count;
+uint8_t front_ball_x;
+uint8_t front_ball_y;
+uint8_t front_y_goal_x;
+uint8_t front_y_goal_y;
+uint8_t front_y_goal_size;
+uint8_t front_b_goal_x;
+uint8_t front_b_goal_y;
+uint8_t front_b_goal_size;
+
+bool is_voltage_decrease = 0;
+uint16_t voltage_cnt;
 
 Timer test;
 
@@ -53,28 +62,30 @@ int main() {
       // line.attach(line_rx, Serial::RxIrq);
       imu.baud(57600);
       imu.attach(imu_rx, Serial::RxIrq);
-      ui.baud(38400);
+      ui.baud(9600);
       ui.attach(ui_rx, Serial::RxIrq);
-      lidar.baud(38400);
+      lidar.baud(9600);
       lidar.attach(lidar_rx, Serial::RxIrq);
-      cam.baud(38400);
+      cam.baud(9600);
       // cam.attach(cam_rx, Serial::RxIrq);
 
       Motor.set_pwm();
       Dribbler.set_pwm();
 
+      test.start();
+
       while (1) {
             Voltage.read();
 
             if (Voltage.get_voltage() < CUT_VOLTAGE) {
-                  voltage_count++;
+                  voltage_cnt++;
             } else {
-                  voltage_count = 0;
+                  voltage_cnt = 0;
             }
-            if (voltage_count >= VOLTAGE_COUNT_NUM) {
-                  voltage_decrease = 1;
+            if (voltage_cnt >= VOLTAGE_CNT_NUM) {
+                  is_voltage_decrease = 1;
             }
-            if (voltage_decrease == 1) {
+            if (is_voltage_decrease == 1) {
                   Motor.free();
                   ui.putc('E');
                   ui.putc('R');
@@ -82,17 +93,31 @@ int main() {
                   Motor.yaw = yaw;
                   Motor.rotation_num_avg = motor_rotation_num_avg;
                   line_rx();
+                  cam_rx();
 
                   if (mode == 0) {
                         Motor.free();
-                        // Motor.run(0, 0, 0);
                   } else if (mode == 1) {
-                        Motor.run(1, 0, 15);
+                        /*
+                        if (front_b_goal_x > 100) {
+                              if (front_b_goal_size > 30) {
+                                    Motor.run(135, abs(100 - front_b_goal_x) * 2 + abs(30 - front_b_goal_size) * 5);
+                              } else {
+                                    Motor.run(45, abs(100 - front_b_goal_x) * 2 + abs(30 - front_b_goal_size) * 5);
+                              }
+                        } else {
+                              if (front_b_goal_size > 30) {
+                                    Motor.run(-135, abs(100 - front_b_goal_x) * 2 + abs(30 - front_b_goal_size) * 5);
+                              } else {
+                                    Motor.run(-45, abs(100 - front_b_goal_x) * 2 + abs(30 - front_b_goal_size) * 5);
+                              }
+                        }*/
+                        Motor.run(0, 15, T);
                   } else if (mode == 2) {
                         if (Tof.val[Tof.min_sensor()] < 100) {
-                              Motor.run(0, Tof.min_sensor() * 22.5 - 180, (200 - Tof.val[Tof.min_sensor()]) / 3);
+                              Motor.run(Tof.min_sensor() * 22.5 - 180, (200 - Tof.val[Tof.min_sensor()]) / 3);
                         } else {
-                              Motor.run(0, 0, 0);
+                              Motor.run(0, 70);
                         }
                   }
             }
@@ -102,12 +127,12 @@ int main() {
 void line_rx() {
       if (line.getc() == 'H') {
             for (int i = 0; i < 4; i++) {
-                  motor_rotaion_number[i] = line.getc();
+                  motor_rotation_num[i] = line.getc();
             }
       }
       motor_rotation_num_avg = 0;
       for (int i = 0; i < 3; i++) {
-            motor_rotation_num_avg += motor_rotaion_number[i] / 3;
+            motor_rotation_num_avg += motor_rotation_num[i] / 3;
       }
 }
 
@@ -158,19 +183,23 @@ void ui_rx() {
       } else if (item == 1) {
             uint8_t yaw_plus = yaw > 0 ? yaw : 0;
             uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
+
             ui.putc('H');
             ui.putc(yaw_plus);
             ui.putc(yaw_minus);
       } else if (item == 2) {
-            uint8_t safe_angle_plus = Tof.safe_angle() > 0 ? Tof.safe_angle() : 0;
-            uint8_t safe_angle_minus = Tof.safe_angle() < 0 ? Tof.safe_angle() * -1 : 0;
+            uint8_t safe_dir_plus = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
+            uint8_t safe_dir_minus = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
             ui.putc('H');
-            ui.putc(safe_angle_plus);
-            ui.putc(safe_angle_minus);
+            ui.putc(safe_dir_plus);
+            ui.putc(safe_dir_minus);
             ui.putc(Tof.min_sensor());
             for (uint8_t i = 0; i < 16; i++) {
                   ui.putc(Tof.val[i]);
             }
+      } else if (item == 3) {
+            ui.putc('H');
+            ui.putc(front_b_goal_size);
       }
 }
 
@@ -183,4 +212,14 @@ void lidar_rx() {
 }
 
 void cam_rx() {
+      if (cam.getc() == 'H') {
+            front_ball_x = cam.getc();
+            front_ball_y = cam.getc();
+            front_y_goal_x = cam.getc();
+            front_y_goal_y = cam.getc();
+            front_y_goal_size = cam.getc();
+            front_b_goal_x = cam.getc();
+            front_b_goal_y = cam.getc();
+            front_b_goal_size = cam.getc();
+      }
 }
