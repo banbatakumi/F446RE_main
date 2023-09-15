@@ -10,8 +10,8 @@
 #define MIN_BRAKE 5   // モーターの最小値ブレーキ
 #define POWER_LIMIT 90   // モーターの最大パワー
 
-#define KP 1.500   // 姿勢制御比例ゲイン
-#define KD 600.000   // 姿制御微分ゲイン
+#define KP 1.000   // 姿勢制御比例ゲイン
+#define KD 500.000   // 姿制御微分ゲイン
 #define D_PERIODO 0.01
 
 #define ENCODER_KP 0.100   // 姿勢制御比例ゲイン
