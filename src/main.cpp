@@ -8,13 +8,15 @@
 #define PI 3.1415926535   // 円周率
 
 #define CUT_VOLTAGE 6.0
-#define VOLTAGE_CNT_NUM 1000
+#define VOLTAGE_CNT_NUM 500
+
+#define EMPTY_READ_BUF_TIMES 50
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define LINE_UART_SPEED 9600
+#define LINE_UART_SPEED 38400
 #define IMU_UART_SPEED 57600
-#define UI_UART_SPEED 9600
-#define LIDAR_UART_SPEED 9600
+#define UI_UART_SPEED 19200
+#define LIDAR_UART_SPEED 19200
 #define CAM_UART_SPEED 9600
 
 // UART通信定義 (TX, RX)
@@ -44,7 +46,6 @@ DigitalOut led_2(PA_6);
 // グローバル変数定義
 int16_t yaw = 0, yaw_correction = 0;
 uint8_t tof_val[16];
-uint8_t motor_rotation_num[4];
 uint8_t motor_rotation_num_avg;
 uint8_t mode = 0;
 uint8_t moving_speed;
@@ -69,11 +70,11 @@ int main() {
       line.baud(LINE_UART_SPEED);
       // line.attach(line_rx, Serial::RxIrq);
       imu.baud(IMU_UART_SPEED);
-      imu.attach(imu_rx, Serial::RxIrq);
+      imu.attach(&imu_rx);
       ui.baud(UI_UART_SPEED);
-      ui.attach(&ui_rx);
+      // ui.attach(&ui_rx);
       lidar.baud(LIDAR_UART_SPEED);
-      lidar.attach(lidar_rx, Serial::RxIrq);
+      lidar.attach(&lidar_rx);
       cam.baud(CAM_UART_SPEED);
       // cam.attach(cam_rx, Serial::RxIrq);
 
@@ -99,12 +100,19 @@ int main() {
                   ui.putc('R');
             } else {
                   Motor.yaw = yaw;
-                  Motor.rotation_num_avg = motor_rotation_num_avg;
-                  line_rx();
-                  cam_rx();
+                  if (line.readable() == 1) {
+                        line_rx();
+                  }
+                  if (cam.readable() == 1) {
+                        cam_rx();
+                  }
+                  if (ui.readable() == 1) {
+                        ui_rx();
+                  }
 
                   if (mode == 0) {
                         Motor.free();
+                        printf("%d", mode);
                   } else if (mode == 1) {
                         /*
                         if (line_left_val > 30) {
@@ -126,12 +134,17 @@ int main() {
                                     }
                               }
                         }*/
-                        Motor.run(0, 9, T);
+                        if (line_right_val > 65 || line_left_val > 65) {
+                              Motor.run(90, 50);
+                        } else {
+                              Motor.run(-90, motor_rotation_num_avg < 2 ? 90 : 30);
+                        }
+                        // Motor.run(0, 0);
                   } else if (mode == 2) {
                         if (Tof.val[Tof.min_sensor()] < 100) {
-                              Motor.run(Tof.min_sensor() * 22.5 - 180, (200 - Tof.val[Tof.min_sensor()]) / 3);
+                              Motor.run(Tof.safe_dir(), 40);
                         } else {
-                              Motor.run(0, 70);
+                              Motor.run(0, Tof.val[Tof.min_sensor()] / 4);
                         }
                   }
             }
@@ -139,28 +152,51 @@ int main() {
 }
 
 void line_rx() {
-      if (line.getc() == 'H') {
-            for (int i = 0; i < 4; i++) {
-                  motor_rotation_num[i] = line.getc();
-            }
-            line_left_val = line.getc();
-            line_right_val = line.getc();
+      const uint8_t recv_byte_num = 5;
+      uint8_t recv_byte[recv_byte_num];
+
+      for (int i = 0; i < recv_byte_num; i++) {
+            recv_byte[i] = line.getc();   // 一旦すべてのデータを格納する
+      }
+      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+            motor_rotation_num_avg = recv_byte[1];
+            line_left_val = recv_byte[2];
+            line_right_val = recv_byte[3];
       }
 
-      motor_rotation_num_avg = 0;
-      for (int i = 0; i < 3; i++) {
-            motor_rotation_num_avg += motor_rotation_num[i] / 3;
+      uint8_t n = 0;
+      while (line.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+            line.getc();   // データは格納されない
+            n++;
+            if (n > EMPTY_READ_BUF_TIMES) {
+                  break;
+            }
       }
 }
 
 void imu_rx() {
-      if (imu.getc() == 'H') {
-            uint8_t yaw_plus = imu.getc();
-            uint8_t yaw_minus = imu.getc();
+      const uint8_t recv_byte_num = 4;
+      uint8_t recv_byte[recv_byte_num];
+
+      for (int i = 0; i < recv_byte_num; i++) {
+            recv_byte[i] = imu.getc();   // 一旦すべてのデータを格納する
+      }
+      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+            uint8_t yaw_plus = recv_byte[1];
+            uint8_t yaw_minus = recv_byte[2];
 
             yaw = yaw_plus == 0 ? yaw_minus * -1 : yaw_plus;
             yaw -= yaw_correction;
             yaw -= yaw > 180 ? 360 : (yaw < -180 ? -360 : 0);
+      }
+
+      uint8_t n = 0;
+      while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+            imu.getc();   // データは格納されない
+            n++;
+            if (n > EMPTY_READ_BUF_TIMES) {
+                  break;
+            }
       }
 }
 
@@ -168,7 +204,7 @@ void ui_rx() {
       int8_t item = 0;
       uint8_t dribbler_sig = 0;
 
-      if (ui.getc() == 'H') {
+      if (ui.getc() == 0xFF) {
             item = ui.getc() - 10;
             if (item == 0) {
                   mode = ui.getc();
@@ -195,19 +231,19 @@ void ui_rx() {
       }
 
       if (item == 0 && mode == 0) {
-            ui.putc('H');
             ui.putc(uint8_t(Voltage.get_voltage() * 10));
       } else if (item == 1) {
             uint8_t yaw_plus = yaw > 0 ? yaw : 0;
             uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
 
-            ui.putc('H');
+            ui.putc(0xFF);
             ui.putc(yaw_plus);
             ui.putc(yaw_minus);
       } else if (item == 2) {
             uint8_t safe_dir_plus = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
             uint8_t safe_dir_minus = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
-            ui.putc('H');
+
+            ui.putc(0xFF);
             ui.putc(safe_dir_plus);
             ui.putc(safe_dir_minus);
             ui.putc(Tof.min_sensor());
@@ -215,21 +251,34 @@ void ui_rx() {
                   ui.putc(Tof.val[i]);
             }
       } else if (item == 3) {
-            ui.putc('H');
             ui.putc(motor_rotation_num_avg);
       }
 }
 
 void lidar_rx() {
-      if (lidar.getc() == 'H') {
+      const uint8_t recv_byte_num = 18;
+      uint8_t recv_byte[recv_byte_num];
+
+      for (int i = 0; i < recv_byte_num; i++) {
+            recv_byte[i] = lidar.getc();   // 一旦すべてのデータを格納する
+      }
+      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
             for (uint8_t i = 0; i < 16; i++) {
-                  Tof.val[i] = lidar.getc();
+                  Tof.val[i] = recv_byte[i + 1];
+            }
+      }
+
+      uint8_t n = 0;
+      while (lidar.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+            lidar.getc();   // データは格納されない
+            n++;
+            if (n > EMPTY_READ_BUF_TIMES) {
+                  break;
             }
       }
 }
 
 void cam_rx() {
-      led_1 = 1;
       if (cam.getc() == 'H') {
             front_ball_x = cam.getc();
             front_ball_y = cam.getc();
