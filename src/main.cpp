@@ -10,13 +10,13 @@
 #define CUT_VOLTAGE 6.0
 #define VOLTAGE_CNT_NUM 500
 
-#define EMPTY_READ_BUF_TIMES 50
+#define EMPTY_READ_BUF_TIMES 10
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define LINE_UART_SPEED 38400
-#define IMU_UART_SPEED 57600
+#define LINE_UART_SPEED 57600
+#define IMU_UART_SPEED 115200
 #define UI_UART_SPEED 19200
-#define LIDAR_UART_SPEED 19200
+#define LIDAR_UART_SPEED 57600
 #define CAM_UART_SPEED 9600
 
 // UART通信定義 (TX, RX)
@@ -35,7 +35,7 @@ void cam_rx();
 
 // ピン定義
 voltage Voltage(PA_4);
-motor Motor(PC_8, PC_6, PB_3, PB_5, PB_10, PB_2, PB_15, PB_14);
+motor Motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
 dribbler Dribbler(PB_6, PB_7, PB_8, PB_9);
 hold Hold(PC_5, PC_4);
 tof Tof;
@@ -72,7 +72,7 @@ int main() {
       imu.baud(IMU_UART_SPEED);
       imu.attach(&imu_rx);
       ui.baud(UI_UART_SPEED);
-      // ui.attach(&ui_rx);
+      ui.attach(&ui_rx);
       lidar.baud(LIDAR_UART_SPEED);
       lidar.attach(&lidar_rx);
       cam.baud(CAM_UART_SPEED);
@@ -107,7 +107,7 @@ int main() {
                         cam_rx();
                   }
                   if (ui.readable() == 1) {
-                        ui_rx();
+                        // ui_rx();
                   }
 
                   if (mode == 0) {
@@ -134,12 +134,11 @@ int main() {
                                     }
                               }
                         }*/
-                        if (line_right_val > 65 || line_left_val > 65) {
-                              Motor.run(90, 50);
+                        if (line_left_val < 60 && line_right_val < 60) {
+                              Motor.run(-90, 30);
                         } else {
-                              Motor.run(-90, motor_rotation_num_avg < 2 ? 90 : 30);
+                              Motor.run(90, 60);
                         }
-                        // Motor.run(0, 0);
                   } else if (mode == 2) {
                         if (Tof.val[Tof.min_sensor()] < 100) {
                               Motor.run(Tof.safe_dir(), 40);
@@ -152,50 +151,46 @@ int main() {
 }
 
 void line_rx() {
-      const uint8_t recv_byte_num = 5;
-      uint8_t recv_byte[recv_byte_num];
+      if (line.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 4;
+            uint8_t recv_byte[recv_byte_num];
 
-      for (int i = 0; i < recv_byte_num; i++) {
-            recv_byte[i] = line.getc();   // 一旦すべてのデータを格納する
-      }
-      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-            motor_rotation_num_avg = recv_byte[1];
-            line_left_val = recv_byte[2];
-            line_right_val = recv_byte[3];
-      }
+            for (int i = 0; i < recv_byte_num; i++) {
+                  recv_byte[i] = line.getc();   // 一旦すべてのデータを格納する
+            }
+            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+                  motor_rotation_num_avg = recv_byte[0];
+                  line_left_val = recv_byte[1];
+                  line_right_val = recv_byte[2];
+            }
 
-      uint8_t n = 0;
-      while (line.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
-            line.getc();   // データは格納されない
-            n++;
-            if (n > EMPTY_READ_BUF_TIMES) {
-                  break;
+            uint8_t n = 0;
+            while (line.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+                  line.getc();   // データは格納されない
+                  n++;
+                  if (n > EMPTY_READ_BUF_TIMES) {
+                        break;
+                  }
             }
       }
 }
 
 void imu_rx() {
-      const uint8_t recv_byte_num = 4;
-      uint8_t recv_byte[recv_byte_num];
-
-      for (int i = 0; i < recv_byte_num; i++) {
-            recv_byte[i] = imu.getc();   // 一旦すべてのデータを格納する
-      }
-      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-            uint8_t yaw_plus = recv_byte[1];
-            uint8_t yaw_minus = recv_byte[2];
+      if (imu.getc() == 0xFF) {   // ヘッダーがあることを確認
+            uint8_t yaw_plus = imu.getc();
+            uint8_t yaw_minus = imu.getc();
 
             yaw = yaw_plus == 0 ? yaw_minus * -1 : yaw_plus;
             yaw -= yaw_correction;
             yaw -= yaw > 180 ? 360 : (yaw < -180 ? -360 : 0);
-      }
 
-      uint8_t n = 0;
-      while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
-            imu.getc();   // データは格納されない
-            n++;
-            if (n > EMPTY_READ_BUF_TIMES) {
-                  break;
+            uint8_t n = 0;
+            while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+                  imu.getc();   // データは格納されない
+                  n++;
+                  if (n > EMPTY_READ_BUF_TIMES) {
+                        break;
+                  }
             }
       }
 }
@@ -242,11 +237,12 @@ void ui_rx() {
       } else if (item == 2) {
             uint8_t safe_dir_plus = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
             uint8_t safe_dir_minus = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
+            uint8_t tof_min_sensor = Tof.min_sensor();
 
             ui.putc(0xFF);
             ui.putc(safe_dir_plus);
             ui.putc(safe_dir_minus);
-            ui.putc(Tof.min_sensor());
+            ui.putc(tof_min_sensor);
             for (uint8_t i = 0; i < 16; i++) {
                   ui.putc(Tof.val[i]);
             }
@@ -256,24 +252,26 @@ void ui_rx() {
 }
 
 void lidar_rx() {
-      const uint8_t recv_byte_num = 18;
-      uint8_t recv_byte[recv_byte_num];
+      if (lidar.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 17;
+            uint8_t recv_byte[recv_byte_num];
 
-      for (int i = 0; i < recv_byte_num; i++) {
-            recv_byte[i] = lidar.getc();   // 一旦すべてのデータを格納する
-      }
-      if (recv_byte[0] == 0xFF && recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-            for (uint8_t i = 0; i < 16; i++) {
-                  Tof.val[i] = recv_byte[i + 1];
+            for (int i = 0; i < recv_byte_num; i++) {
+                  recv_byte[i] = lidar.getc();   // 一旦すべてのデータを格納する
             }
-      }
+            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+                  for (uint8_t i = 0; i < 16; i++) {
+                        Tof.val[i] = recv_byte[i];
+                  }
+            }
 
-      uint8_t n = 0;
-      while (lidar.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
-            lidar.getc();   // データは格納されない
-            n++;
-            if (n > EMPTY_READ_BUF_TIMES) {
-                  break;
+            uint8_t n = 0;
+            while (lidar.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+                  lidar.getc();   // データは格納されない
+                  n++;
+                  if (n > EMPTY_READ_BUF_TIMES) {
+                        break;
+                  }
             }
       }
 }

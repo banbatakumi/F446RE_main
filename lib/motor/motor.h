@@ -14,19 +14,13 @@
 #define KD 500.000   // 姿制御微分ゲイン
 #define D_PERIODO 0.01
 
-#define ENCODER_KP 0.100   // 姿勢制御比例ゲイン
-#define ENCODER_KD 10.000   // 姿制御微分ゲイン
-
-#define MOVING_AVG_CNT_NUM 10   // 移動平均フィルタの回数
+#define MOVING_AVG_CNT_NUM 25   // 移動平均フィルタの回数
 
 #define MOTOR_QTY 4
-
-#define ENCODER_CYCLE 0.01
-
 class motor {
      public:
       motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName motor_2_2_, PinName motor_3_1_, PinName motor_3_2_, PinName motor_4_1_, PinName motor_4_2_);
-      void run(int16_t moving_dir, uint8_t moving_speed, bool is_encoder = 0, int16_t robot_angle = 0, uint8_t robot_angle_mode = 0, uint8_t pd_limit = POWER_LIMIT);
+      void run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle = 0, uint8_t robot_angle_mode = 0, uint8_t pd_limit = POWER_LIMIT);
       void set_pwm();
       void brake(uint16_t brake_time = 0);
       void free();
@@ -36,16 +30,12 @@ class motor {
 #define BACK 3
 #define LEFT 4
 
-#define T 1
-#define F 0
-
       int16_t motor_1();
       int16_t motor_2();
       int16_t motor_3();
       int16_t motor_4();
 
       int16_t yaw;
-      uint8_t rotation_num_avg;
 
      private:
       PwmOut motor_1_1;
@@ -63,11 +53,7 @@ class motor {
 
       uint8_t moving_avg_cnt;
 
-      int16_t encoder_pre_p, encoder_pd;
-      float encoder_p, encoder_d;
-
       Timer d_timer;
-      Timer encoder_cycle_timer;
 };
 
 #endif

@@ -15,25 +15,9 @@ motor::motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName
       d_timer.start();
 }
 
-void motor::run(int16_t moving_dir, uint8_t moving_speed, bool is_encoder, int16_t robot_angle, uint8_t robot_angle_mode, uint8_t pd_limit) {
-      static float speed = 0;
-      if (is_encoder == 1) {
-            encoder_cycle_timer.start();
-            if (encoder_cycle_timer.read() > ENCODER_CYCLE) {
-                  encoder_p = rotation_num_avg - moving_speed;
-                  encoder_d = (encoder_p - encoder_pre_p) * encoder_cycle_timer.read();   // 微分
-                  encoder_pre_p = encoder_p;
-                  encoder_pd = encoder_p * ENCODER_KP + encoder_d * ENCODER_KD;
-                  speed -= encoder_pd;
-                  encoder_cycle_timer.reset();
-            }
-      } else {
-            encoder_cycle_timer.stop();
-            speed = moving_speed;
-      }
-      if (speed < 0) {
-            speed = 0;
-      }
+void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, uint8_t robot_angle_mode, uint8_t pd_limit) {
+      static uint8_t speed = moving_speed;
+
       if (speed > POWER_LIMIT) {
             speed = POWER_LIMIT;
       }
@@ -43,16 +27,14 @@ void motor::run(int16_t moving_dir, uint8_t moving_speed, bool is_encoder, int16
       }
 
       // モーターの最大パフォーマンス発揮
-      if (is_encoder == 1) {
-            uint8_t max_power = 0;
-            for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-                  if (max_power < abs(power[i])) {
-                        max_power = abs(power[i]);
-                  }
+      uint8_t max_power = 0;
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
+            if (max_power < abs(power[i])) {
+                  max_power = abs(power[i]);
             }
-            for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-                  power[i] *= float(speed) / max_power;
-            }
+      }
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
+            power[i] *= float(speed) / max_power;
       }
 
       // PD姿勢制御
