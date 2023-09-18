@@ -13,10 +13,31 @@ motor::motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName
       motor_4_2 = 0;
 
       d_timer.start();
+      add_speed_timer.start();
 }
 
 void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, uint8_t robot_angle_mode, uint8_t pd_limit) {
-      static uint8_t speed = moving_speed;
+      uint8_t speed = moving_speed;
+      int16_t power[MOTOR_QTY];
+      static int16_t tmp_power[4][MOVING_AVG_CNT_NUM];
+      static uint8_t add_speed = 0;
+
+      if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
+            if (encoder_val < speed * 0.1) {
+                  if (add_speed < 50) {
+                        add_speed++;
+                  }
+            } else {
+                  if (add_speed > 5) {
+                        add_speed -= 2;
+                  }
+            }
+            add_speed_timer.reset();
+      }
+
+      if (encoder_val < speed * 0.1 || add_speed > 5) {
+            speed += add_speed * ADD_SPEED_K;
+      }
 
       if (speed > POWER_LIMIT) {
             speed = POWER_LIMIT;
@@ -41,7 +62,7 @@ void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
       p = robot_angle - yaw;   // 比例
       if (p > 180) p -= 360;
       if (p < -180) p += 360;
-      if (d_timer.read() > D_PERIODO) {
+      if (d_timer.read() > D_PERIOD) {
             d = (p - pre_p) * d_timer.read();   // 微分
             pre_p = p;
             d_timer.reset();
@@ -59,19 +80,19 @@ void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
                   power[i] += i < 2 ? -pd : pd;
             } else if (robot_angle_mode == 1) {   // ボールを前に捕捉した状態
                   if (i == 1 || i == 2) {
-                        power[i] += i < 2 ? -pd : pd;
+                        power[i] += i < 2 ? pd * -2 : pd * 2;
                   }
             } else if (robot_angle_mode == 2) {   // ボールを右に捕捉した状態
                   if (i == 2 || i == 3) {
-                        power[i] += i < 2 ? -pd : pd;
+                        power[i] += i < 2 ? pd * -2 : pd * 2;
                   }
             } else if (robot_angle_mode == 3) {   // ボールを後ろに捕捉した状態
                   if (i == 0 || i == 3) {
-                        power[i] += i < 2 ? -pd : pd;
+                        power[i] += i < 2 ? pd * -2 : pd * 2;
                   }
             } else if (robot_angle_mode == 4) {   // ボールを左に捕捉した状態
                   if (i == 0 || i == 1) {
-                        power[i] += i < 2 ? -pd : pd;
+                        power[i] += i < 2 ? pd * -2 : pd * 2;
                   }
             }
 
@@ -133,17 +154,4 @@ void motor::free() {
       motor_3_2 = 0;
       motor_4_1 = 0;
       motor_4_2 = 0;
-}
-
-int16_t motor::motor_1() {
-      return power[0];
-}
-int16_t motor::motor_2() {
-      return power[1];
-}
-int16_t motor::motor_3() {
-      return power[2];
-}
-int16_t motor::motor_4() {
-      return power[3];
 }

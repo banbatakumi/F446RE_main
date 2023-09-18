@@ -3,20 +3,26 @@
 
 #include "mbed.h"
 
-#define RC 0.8
+#define RC 0.5
+#define CATCH_TH 150
 
 class hold {
      public:
-      hold(PinName front_, PinName back_);
+      hold(PinName front_sensor_, PinName back_sensor_);
       void read();
-      uint8_t front_read();
-      uint8_t back_read();
+      uint8_t get_front_val();
+      uint8_t get_back_val();
+      bool is_front();
+      bool is_back();
 
      private:
-      AnalogIn front;
-      AnalogIn back;
+      AnalogIn front_sensor;
+      AnalogIn back_sensor;
 
-      uint8_t front_rc_value, back_rc_value;
+      uint8_t front_val;
+      uint8_t back_val;
+      uint8_t front_rc_val;
+      uint8_t back_rc_val;
 };
 
 #endif

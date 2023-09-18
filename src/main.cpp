@@ -10,14 +10,14 @@
 #define CUT_VOLTAGE 6.0
 #define VOLTAGE_CNT_NUM 500
 
-#define EMPTY_READ_BUF_TIMES 10
+#define EMPTY_READ_BUF_TIMES 20
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define LINE_UART_SPEED 57600
 #define IMU_UART_SPEED 115200
 #define UI_UART_SPEED 19200
 #define LIDAR_UART_SPEED 57600
-#define CAM_UART_SPEED 9600
+#define CAM_UART_SPEED 57600
 
 // UART通信定義 (TX, RX)
 RawSerial line(PA_2, PA_3);
@@ -37,29 +37,30 @@ void cam_rx();
 voltage Voltage(PA_4);
 motor Motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
 dribbler Dribbler(PB_6, PB_7, PB_8, PB_9);
-hold Hold(PC_5, PC_4);
+hold Hold(PC_4, PC_5);
 tof Tof;
 
 DigitalOut led_1(PA_5);
 DigitalOut led_2(PA_6);
 
 // グローバル変数定義
-int16_t yaw = 0, yaw_correction = 0;
+int16_t yaw = 0;
+uint8_t is_yaw_correction = 0;
 uint8_t tof_val[16];
-uint8_t motor_rotation_num_avg;
+uint8_t encoder_val_avg;
 uint8_t mode = 0;
 uint8_t moving_speed;
 uint8_t line_left_val;
 uint8_t line_right_val;
 
-uint8_t front_ball_x;
-uint8_t front_ball_y;
-uint8_t front_y_goal_x;
-uint8_t front_y_goal_y;
-uint8_t front_y_goal_size;
-uint8_t front_b_goal_x;
-uint8_t front_b_goal_y;
-uint8_t front_b_goal_size;
+uint8_t ball_dir;
+uint8_t ball_dis;
+uint8_t y_goal_dir;
+uint8_t y_goal_dis;
+uint8_t y_goal_size;
+uint8_t b_goal_dir;
+uint8_t b_goal_dis;
+uint8_t b_goal_size;
 
 bool is_voltage_decrease = 0;
 uint16_t voltage_cnt;
@@ -100,51 +101,33 @@ int main() {
                   ui.putc('R');
             } else {
                   Motor.yaw = yaw;
+                  Motor.encoder_val = encoder_val_avg;
+                  Hold.read();
+
                   if (line.readable() == 1) {
                         line_rx();
                   }
                   if (cam.readable() == 1) {
                         cam_rx();
                   }
-                  if (ui.readable() == 1) {
-                        // ui_rx();
-                  }
 
                   if (mode == 0) {
                         Motor.free();
-                        printf("%d", mode);
                   } else if (mode == 1) {
-                        /*
-                        if (line_left_val > 30) {
-                              Motor.run(90, 90);
-                        } else if (line_right_val > 30) {
-                              Motor.run(-90, 90);
+                        if (line_left_val > 70) {
+                              Motor.run(90, 50);
+                              Dribbler.f_stop();
+                        } else if (line_right_val > 70) {
+                              Motor.run(-90, 50);
+                        } else if (ball_dis > 50) {
+                              Motor.run((ball_dir - 100) / 1.1, 30);
+                              Dribbler.f_hold(50);
                         } else {
-                              if (front_ball_x > 100) {
-                                    if (Tof.val[8] > 100) {
-                                          Motor.run(135, abs(100 - front_ball_x) * 2 + abs(100 - Tof.val[8]) * 2);
-                                    } else {
-                                          Motor.run(45, abs(100 - front_ball_x) * 2 + abs(100 - Tof.val[8]) * 2);
-                                    }
-                              } else {
-                                    if (Tof.val[8] > 100) {
-                                          Motor.run(-135, abs(100 - front_ball_x) * 2 + abs(100 - Tof.val[8]) * 2);
-                                    } else {
-                                          Motor.run(-45, abs(100 - front_ball_x) * 2 + abs(100 - Tof.val[8]) * 2);
-                                    }
-                              }
-                        }*/
-                        if (line_left_val < 60 && line_right_val < 60) {
-                              Motor.run(-90, 30);
-                        } else {
-                              Motor.run(90, 60);
+                              Motor.run(180, 50);
+                              Dribbler.f_stop();
                         }
                   } else if (mode == 2) {
-                        if (Tof.val[Tof.min_sensor()] < 100) {
-                              Motor.run(Tof.safe_dir(), 40);
-                        } else {
-                              Motor.run(0, Tof.val[Tof.min_sensor()] / 4);
-                        }
+                        Motor.run(0, 0, 0, RIGHT);
                   }
             }
       }
@@ -159,7 +142,7 @@ void line_rx() {
                   recv_byte[i] = line.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-                  motor_rotation_num_avg = recv_byte[0];
+                  encoder_val_avg = recv_byte[0];
                   line_left_val = recv_byte[1];
                   line_right_val = recv_byte[2];
             }
@@ -180,9 +163,14 @@ void imu_rx() {
             uint8_t yaw_plus = imu.getc();
             uint8_t yaw_minus = imu.getc();
 
+            static int16_t yaw_correction = 0;
+
             yaw = yaw_plus == 0 ? yaw_minus * -1 : yaw_plus;
             yaw -= yaw_correction;
             yaw -= yaw > 180 ? 360 : (yaw < -180 ? -360 : 0);
+            if (is_yaw_correction == 1) {
+                  yaw_correction = yaw + yaw_correction;
+            }
 
             uint8_t n = 0;
             while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
@@ -196,58 +184,79 @@ void imu_rx() {
 }
 
 void ui_rx() {
-      int8_t item = 0;
-      uint8_t dribbler_sig = 0;
+      static int8_t item = 0;
+      static uint8_t dribbler_sig = 0;
 
-      if (ui.getc() == 0xFF) {
-            item = ui.getc() - 10;
-            if (item == 0) {
-                  mode = ui.getc();
-            } else if (item == 1) {
-                  if (ui.getc() == 1) {
-                        yaw_correction = yaw + yaw_correction;
-                  }
-            } else if (item == -1) {
-                  moving_speed = ui.getc();
-            } else if (item == -2) {
-                  dribbler_sig = ui.getc();
-                  if (dribbler_sig == 1) {
-                        Dribbler.f_hold(95);
-                  } else if (dribbler_sig == 2) {
-                        Dribbler.f_kick();
-                  } else if (dribbler_sig == 3) {
-                        Dribbler.b_hold(95);
-                  } else if (dribbler_sig == 4) {
-                        Dribbler.b_kick();
-                  } else {
-                        Dribbler.stop();
+      if (ui.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 6;
+            uint8_t recv_byte[recv_byte_num];
+
+            for (int i = 0; i < recv_byte_num; i++) {
+                  recv_byte[i] = ui.getc();   // 一旦すべてのデータを格納する
+            }
+            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+                  item = recv_byte[0] - 100;
+                  mode = recv_byte[1];
+                  is_yaw_correction = recv_byte[2];
+                  moving_speed = recv_byte[3];
+                  dribbler_sig = recv_byte[4];
+            }
+
+            uint8_t n = 0;
+            while (ui.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+                  ui.getc();   // データは格納されない
+                  n++;
+                  if (n > EMPTY_READ_BUF_TIMES) {
+                        break;
                   }
             }
       }
 
-      if (item == 0 && mode == 0) {
-            ui.putc(uint8_t(Voltage.get_voltage() * 10));
+      switch (dribbler_sig) {
+            case 0:
+                  Dribbler.stop();
+                  break;
+            case 1:
+                  Dribbler.f_hold(90);
+                  break;
+            case 2:
+                  Dribbler.f_kick();
+                  break;
+            case 3:
+                  Dribbler.b_hold(90);
+                  break;
+            case 4:
+                  Dribbler.b_kick();
+                  break;
+      }
+
+      uint8_t send_byte_num;
+      uint8_t send_byte[20];
+
+      send_byte[0] = 0xFF;
+
+      if (item == 0) {
+            send_byte_num = 1;
+            send_byte[0] = uint8_t(Voltage.get_voltage() * 10);
       } else if (item == 1) {
-            uint8_t yaw_plus = yaw > 0 ? yaw : 0;
-            uint8_t yaw_minus = yaw < 0 ? yaw * -1 : 0;
-
-            ui.putc(0xFF);
-            ui.putc(yaw_plus);
-            ui.putc(yaw_minus);
+            send_byte_num = 3;
+            send_byte[1] = yaw > 0 ? yaw : 0;
+            send_byte[2] = yaw < 0 ? yaw * -1 : 0;
       } else if (item == 2) {
-            uint8_t safe_dir_plus = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
-            uint8_t safe_dir_minus = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
-            uint8_t tof_min_sensor = Tof.min_sensor();
-
-            ui.putc(0xFF);
-            ui.putc(safe_dir_plus);
-            ui.putc(safe_dir_minus);
-            ui.putc(tof_min_sensor);
+            send_byte_num = 20;
+            send_byte[1] = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
+            send_byte[2] = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
+            send_byte[3] = Tof.min_sensor();
             for (uint8_t i = 0; i < 16; i++) {
-                  ui.putc(Tof.val[i]);
+                  send_byte[i + 4] = Tof.val[i];
             }
       } else if (item == 3) {
-            ui.putc(motor_rotation_num_avg);
+            send_byte_num = 1;
+            send_byte[0] = ball_dir;
+      }
+
+      for (uint8_t i = 0; i < send_byte_num; i++) {
+            ui.putc(send_byte[i]);
       }
 }
 
@@ -277,14 +286,31 @@ void lidar_rx() {
 }
 
 void cam_rx() {
-      if (cam.getc() == 'H') {
-            front_ball_x = cam.getc();
-            front_ball_y = cam.getc();
-            front_y_goal_x = cam.getc();
-            front_y_goal_y = cam.getc();
-            front_y_goal_size = cam.getc();
-            front_b_goal_x = cam.getc();
-            front_b_goal_y = cam.getc();
-            front_b_goal_size = cam.getc();
+      if (cam.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 9;
+            uint8_t recv_byte[recv_byte_num];
+
+            for (int i = 0; i < recv_byte_num; i++) {
+                  recv_byte[i] = cam.getc();   // 一旦すべてのデータを格納する
+            }
+            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+                  ball_dir = recv_byte[0];
+                  ball_dis = recv_byte[1];
+                  y_goal_dir = recv_byte[2];
+                  y_goal_dis = recv_byte[3];
+                  y_goal_size = recv_byte[4];
+                  b_goal_dir = recv_byte[5];
+                  b_goal_dis = recv_byte[6];
+                  b_goal_size = recv_byte[7];
+            }
+
+            uint8_t n = 0;
+            while (cam.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
+                  cam.getc();   // データは格納されない
+                  n++;
+                  if (n > EMPTY_READ_BUF_TIMES) {
+                        break;
+                  }
+            }
       }
 }

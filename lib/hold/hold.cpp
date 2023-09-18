@@ -2,22 +2,37 @@
 
 #include "mbed.h"
 
-hold::hold(PinName front_, PinName back_) : front(front_), back(back_) {
+hold::hold(PinName front_sensor_, PinName back_sensor_) : front_sensor(front_sensor_), back_sensor(back_sensor_) {
 }
 
 void hold::read() {
-      uint8_t front_value = front.read_u16() / 256;
-      uint8_t back_value = back.read_u16() / 256;
+      front_val = front_sensor.read_u16() / 256;
+      back_val = back_sensor.read_u16() / 256;
 
-      // RCフィルタリング
-      front_rc_value = front_value * (1 - RC) + front_rc_value * RC;
-      back_rc_value = back_value * (1 - RC) + back_rc_value * RC;
+      front_rc_val = front_rc_val * RC + front_val * (1 - RC);
+      back_rc_val = back_rc_val * RC + back_val * (1 - RC);
 }
 
-uint8_t hold::front_read() {
-      return front_rc_value;
+uint8_t hold::get_front_val() {
+      return front_rc_val;
 }
 
-uint8_t hold::back_read() {
-      return back_rc_value;
+uint8_t hold::get_back_val() {
+      return back_rc_val;
+}
+
+bool hold::is_front() {
+      bool is_catch = 0;
+      if (front_rc_val < CATCH_TH) {
+            is_catch = 1;
+      }
+      return is_catch;
+}
+
+bool hold::is_back() {
+      bool is_catch = 0;
+      if (back_rc_val < CATCH_TH) {
+            is_catch = 1;
+      }
+      return is_catch;
 }
