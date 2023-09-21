@@ -7,11 +7,11 @@
 
 #define TOF_QTY 16
 
-class tof {
+class Tof {
      public:
-      tof();
-      int16_t safe_dir();
-      uint8_t min_sensor();
+      Tof();
+      int16_t SafeDir();
+      uint8_t MinSensor();
 
       uint8_t val[TOF_QTY];
 

@@ -2,14 +2,14 @@
 
 #include "mbed.h"
 
-tof::tof() {
+Tof::Tof() {
       for (uint8_t i = 0; i < TOF_QTY; i++) {
             unit_vector_x[i] = cos((i * 360.00000 / TOF_QTY) * PI / 180.00000);
             unit_vector_y[i] = sin((i * 360.00000 / TOF_QTY) * PI / 180.00000);
       }
 }
 
-int16_t tof::safe_dir() {
+int16_t Tof::SafeDir() {
       int16_t result_vector_x = 0;
       int16_t result_vector_y = 0;
       int16_t tmp_safe_dir;
@@ -22,7 +22,7 @@ int16_t tof::safe_dir() {
       return tmp_safe_dir;
 }
 
-uint8_t tof::min_sensor() {
+uint8_t Tof::MinSensor() {
       uint8_t min_val_sensor_num = 0;
       uint8_t min_val = val[0];
 

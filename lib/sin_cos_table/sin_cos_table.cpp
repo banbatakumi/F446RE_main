@@ -1,6 +1,6 @@
-#include "MySinCosTable.h"
+#include "sin_cos_table.h"
 
-float sin32_t(int theta) {
+float MySin(int theta) {
       float ret;
       int theta_cal;
       while (theta < 0) {
@@ -215,7 +215,7 @@ float sin32_t(int theta) {
       return ret;
 }
 
-float cos32_t(int theta) {
+float MyCos(int theta) {
       float ret;
       int theta_cal;
       while (theta < 0) {

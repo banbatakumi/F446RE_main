@@ -1,4 +1,4 @@
-#include "SimplifyDeg.h"
+#include "simplify_deg.h"
 
 int SimplifyDeg(int deg) {
       while (deg > 180) {

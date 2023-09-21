@@ -7,11 +7,11 @@
 #define SAMPLE_CYCLE 0.5
 #define CHANGE_VOLTAGE 0.0002125037
 
-class voltage {
+class Voltage {
      public:
-      voltage(PinName battery_voltage_);
-      void read();
-      float get_voltage();
+      Voltage(PinName battery_voltage_);
+      void Read();
+      float Get();
 
      private:
       AnalogIn battery_voltage;

@@ -1,13 +1,13 @@
 #ifndef MBED_MOTOR_H
 #define MBED_MOTOR_H
 
-#include "MySinCosTable.h"
-#include "SimplifyDeg.h"
 #include "mbed.h"
+#include "simplify_deg.h"
+#include "sin_cos_table.h"
 
 #define PI 3.1415926535   // 円周率
 
-#define MOTOR_FREQUENCY 30000   // モーターのPWM周波数
+#define PWM_FREQUENCY 30000   // モーターのPWM周波数
 
 #define MIN_BRAKE 5   // モーターの最小値ブレーキ
 #define POWER_LIMIT 90   // モーターの最大パワー
@@ -22,13 +22,13 @@
 
 #define ADD_SPEED_PERIOD 0.01
 #define ADD_SPEED_K 1
-class motor {
+class Motor {
      public:
-      motor(PinName motor_1_1_, PinName motor_1_2_, PinName motor_2_1_, PinName motor_2_2_, PinName motor_3_1_, PinName motor_3_2_, PinName motor_4_1_, PinName motor_4_2_);
-      void run(int16_t moving_dir, uint8_t moving_speed = 0, int16_t robot_angle = 0, uint8_t robot_angle_mode = 0, uint8_t pd_limit = POWER_LIMIT);
-      void set_pwm();
-      void brake(uint16_t brake_time = 0);
-      void free();
+      Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_);
+      void Run(int16_t moving_dir, uint8_t moving_speed = 0, int16_t robot_angle = 0, uint8_t robot_angle_mode = 0, uint8_t pd_limit = POWER_LIMIT);
+      void SetPwm();
+      void Brake(uint16_t brake_time = 0);
+      void Free();
 
 #define FRONT 1
 #define RIGHT 2
@@ -39,14 +39,14 @@ class motor {
       uint8_t encoder_val;
 
      private:
-      PwmOut motor_1_1;
-      PwmOut motor_1_2;
-      PwmOut motor_2_1;
-      PwmOut motor_2_2;
-      PwmOut motor_3_1;
-      PwmOut motor_3_2;
-      PwmOut motor_4_1;
-      PwmOut motor_4_2;
+      PwmOut motor_1_a;
+      PwmOut motor_1_b;
+      PwmOut motor_2_a;
+      PwmOut motor_2_b;
+      PwmOut motor_3_a;
+      PwmOut motor_3_b;
+      PwmOut motor_4_a;
+      PwmOut motor_4_b;
 
       int16_t pre_p, pd, pd_limit;
       float p, d;

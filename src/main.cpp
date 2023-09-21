@@ -1,8 +1,8 @@
-#include "SimplifyDeg.h"
 #include "dribbler.h"
 #include "hold.h"
 #include "mbed.h"
 #include "motor.h"
+#include "simplify_deg.h"
 #include "tof.h"
 #include "voltage.h"
 
@@ -35,11 +35,13 @@ void lidar_rx();
 void cam_rx();
 
 // ピン定義
-voltage Voltage(PA_4);
-motor Motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
-dribbler Dribbler(PB_6, PB_7, PB_8, PB_9);
-hold Hold(PC_4, PC_5);
-tof Tof;
+Voltage voltage(PA_4);
+Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
+Dribbler dribblerFront(PB_6, PB_7);
+Dribbler dribblerBack(PB_8, PB_9);
+Hold holdFront(PC_4);
+Hold holdBack(PC_5);
+Tof tof;
 
 DigitalOut led_1(PA_5);
 DigitalOut led_2(PA_6);
@@ -80,15 +82,16 @@ int main() {
       cam.baud(CAM_UART_SPEED);
       // cam.attach(cam_rx, Serial::RxIrq);
 
-      Motor.set_pwm();
-      Dribbler.set_pwm();
+      motor.SetPwm();
+      dribblerFront.SetPwm();
+      dribblerBack.SetPwm();
 
       test.start();
 
       while (1) {
-            Voltage.read();
+            voltage.Read();
 
-            if (Voltage.get_voltage() < CUT_VOLTAGE) {
+            if (voltage.Get() < CUT_VOLTAGE) {
                   voltage_cnt++;
             } else {
                   voltage_cnt = 0;
@@ -97,13 +100,14 @@ int main() {
                   is_voltage_decrease = 1;
             }
             if (is_voltage_decrease == 1) {
-                  Motor.free();
+                  motor.Free();
                   ui.putc('E');
                   ui.putc('R');
             } else {
-                  Motor.yaw = yaw;
-                  Motor.encoder_val = encoder_val_avg;
-                  Hold.read();
+                  motor.yaw = yaw;
+                  motor.encoder_val = encoder_val_avg;
+                  holdFront.Read();
+                  holdBack.Read();
 
                   if (line.readable() == 1) {
                         line_rx();
@@ -113,22 +117,24 @@ int main() {
                   }
 
                   if (mode == 0) {
-                        Motor.free();
+                        motor.Free();
                   } else if (mode == 1) {
                         if (line_left_val > 70) {
-                              Motor.run(90, 50);
-                              Dribbler.f_stop();
+                              motor.Run(90, 50);
+                              dribblerFront.Stop();
                         } else if (line_right_val > 70) {
-                              Motor.run(-90, 50);
+                              motor.Run(-90, 50);
+                        } else if (holdFront.IsHold()) {
+                              motor.Run(0, 0, 90, BACK);
                         } else if (ball_dis > 50) {
-                              Motor.run((ball_dir - 100) / 1.1, 30);
-                              Dribbler.f_hold(50);
+                              motor.Run((ball_dir - 100) / 1.1, 30);
+                              dribblerFront.Hold(50);
                         } else {
-                              Motor.run(180, 50);
-                              Dribbler.f_stop();
+                              motor.Run(180, 50);
+                              dribblerFront.Stop();
                         }
                   } else if (mode == 2) {
-                        Motor.run(0, 0, 0, RIGHT);
+                        motor.Run(0, 0, 0, RIGHT);
                   }
             }
       }
@@ -213,19 +219,20 @@ void ui_rx() {
 
       switch (dribbler_sig) {
             case 0:
-                  Dribbler.stop();
+                  dribblerFront.Stop();
+                  dribblerBack.Stop();
                   break;
             case 1:
-                  Dribbler.f_hold(90);
+                  dribblerFront.Hold(90);
                   break;
             case 2:
-                  Dribbler.f_kick();
+                  dribblerFront.Kick();
                   break;
             case 3:
-                  Dribbler.b_hold(90);
+                  dribblerBack.Hold(90);
                   break;
             case 4:
-                  Dribbler.b_kick();
+                  dribblerBack.Kick();
                   break;
       }
 
@@ -235,22 +242,22 @@ void ui_rx() {
 
       if (item == 0) {
             send_byte_num = 1;
-            send_byte[0] = uint8_t(Voltage.get_voltage() * 10);
+            send_byte[0] = uint8_t(voltage.Get() * 10);
       } else if (item == 1) {
             send_byte_num = 3;
             send_byte[1] = yaw > 0 ? yaw : 0;
             send_byte[2] = yaw < 0 ? yaw * -1 : 0;
       } else if (item == 2) {
             send_byte_num = 20;
-            send_byte[1] = Tof.safe_dir() > 0 ? Tof.safe_dir() : 0;
-            send_byte[2] = Tof.safe_dir() < 0 ? Tof.safe_dir() * -1 : 0;
-            send_byte[3] = Tof.min_sensor();
+            send_byte[1] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
+            send_byte[2] = tof.SafeDir() < 0 ? tof.SafeDir() * -1 : 0;
+            send_byte[3] = tof.MinSensor();
             for (uint8_t i = 0; i < 16; i++) {
-                  send_byte[i + 4] = Tof.val[i];
+                  send_byte[i + 4] = tof.val[i];
             }
       } else if (item == 3) {
             send_byte_num = 1;
-            send_byte[0] = Hold.is_back();
+            send_byte[0] = holdFront.IsHold();
       }
 
       for (uint8_t i = 0; i < send_byte_num; i++) {
@@ -268,7 +275,7 @@ void lidar_rx() {
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
                   for (uint8_t i = 0; i < 16; i++) {
-                        Tof.val[i] = recv_byte[i];
+                        tof.val[i] = recv_byte[i];
                   }
             }
 
