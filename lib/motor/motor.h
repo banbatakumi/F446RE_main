@@ -1,6 +1,8 @@
 #ifndef MBED_MOTOR_H
 #define MBED_MOTOR_H
 
+#include "MySinCosTable.h"
+#include "SimplifyDeg.h"
 #include "mbed.h"
 
 #define PI 3.1415926535   // 円周率

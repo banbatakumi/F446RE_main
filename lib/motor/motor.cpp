@@ -44,7 +44,7 @@ void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
       }
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = sin((moving_dir - (45 + i * 90)) * PI / 180.00000) * speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = sin32_t((moving_dir - (45 + i * 90)) * PI / 180.00000) * speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -59,9 +59,7 @@ void motor::run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
       }
 
       // PD姿勢制御
-      p = robot_angle - yaw;   // 比例
-      if (p > 180) p -= 360;
-      if (p < -180) p += 360;
+      p = SimplifyDeg(robot_angle - yaw);   // 比例
       if (d_timer.read() > D_PERIOD) {
             d = (p - pre_p) * d_timer.read();   // 微分
             pre_p = p;

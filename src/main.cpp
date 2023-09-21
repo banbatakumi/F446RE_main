@@ -1,3 +1,4 @@
+#include "SimplifyDeg.h"
 #include "dribbler.h"
 #include "hold.h"
 #include "mbed.h"
@@ -163,14 +164,12 @@ void imu_rx() {
             uint8_t yaw_plus = imu.getc();
             uint8_t yaw_minus = imu.getc();
 
-            static int16_t yaw_correction = 0;
+            int16_t yaw_correction = 0;
 
-            yaw = yaw_plus == 0 ? yaw_minus * -1 : yaw_plus;
-            yaw -= yaw_correction;
-            yaw -= yaw > 180 ? 360 : (yaw < -180 ? -360 : 0);
             if (is_yaw_correction == 1) {
-                  yaw_correction = yaw + yaw_correction;
+                  yaw_correction += yaw;
             }
+            yaw = SimplifyDeg((yaw_plus == 0 ? yaw_minus * -1 : yaw_plus) - yaw_correction);
 
             uint8_t n = 0;
             while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
@@ -232,7 +231,6 @@ void ui_rx() {
 
       uint8_t send_byte_num;
       uint8_t send_byte[20];
-
       send_byte[0] = 0xFF;
 
       if (item == 0) {
@@ -252,7 +250,7 @@ void ui_rx() {
             }
       } else if (item == 3) {
             send_byte_num = 1;
-            send_byte[0] = ball_dir;
+            send_byte[0] = Hold.is_back();
       }
 
       for (uint8_t i = 0; i < send_byte_num; i++) {
