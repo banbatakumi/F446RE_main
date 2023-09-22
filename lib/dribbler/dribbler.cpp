@@ -7,8 +7,8 @@ Dribbler::Dribbler(PinName motor_a_, PinName motor_b_) : motor_a(motor_a_), moto
       motor_b = 0;
 }
 
-void Dribbler::SetPwm() {
-      motor_a.period_us(MOTOR_FREQUENCY);
+void Dribbler::SetPwmPeriod(uint16_t pwm_period) {
+      motor_a.period_us(pwm_period);
 }
 
 void Dribbler::Hold(uint8_t speed) {

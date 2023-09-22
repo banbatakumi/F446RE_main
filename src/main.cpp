@@ -8,10 +8,10 @@
 
 #define PI 3.1415926535   // 円周率
 
-#define CUT_VOLTAGE 6.0
-#define VOLTAGE_CNT_NUM 500
+#define CUT_VOLTAGE 6.0   // 全機能強制終了する電圧
+#define VOLTAGE_CNT_NUM 500   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
-#define EMPTY_READ_BUF_TIMES 20
+#define MOTOR_PWM_PERIOD 30000   // モーターのPWM周波数(default: 30000)
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define LINE_UART_SPEED 57600
@@ -19,6 +19,8 @@
 #define UI_UART_SPEED 19200
 #define LIDAR_UART_SPEED 57600
 #define CAM_UART_SPEED 57600
+
+#define EMPTY_READ_BUF_TIMES 20   // 毎回データを空にするためにSerial.read()する回数
 
 // UART通信定義 (TX, RX)
 RawSerial line(PA_2, PA_3);
@@ -82,11 +84,9 @@ int main() {
       cam.baud(CAM_UART_SPEED);
       // cam.attach(cam_rx, Serial::RxIrq);
 
-      motor.SetPwm();
-      dribblerFront.SetPwm();
-      dribblerBack.SetPwm();
-
-      test.start();
+      motor.SetPwmPeriod(MOTOR_PWM_PERIOD);
+      dribblerFront.SetPwmPeriod(MOTOR_PWM_PERIOD);
+      dribblerBack.SetPwmPeriod(MOTOR_PWM_PERIOD);
 
       while (1) {
             voltage.Read();
@@ -119,19 +119,36 @@ int main() {
                   if (mode == 0) {
                         motor.Free();
                   } else if (mode == 1) {
-                        if (line_left_val > 70) {
-                              motor.Run(90, 50);
-                              dribblerFront.Stop();
-                        } else if (line_right_val > 70) {
-                              motor.Run(-90, 50);
-                        } else if (holdFront.IsHold()) {
-                              motor.Run(0, 0, 90, BACK);
-                        } else if (ball_dis > 50) {
-                              motor.Run((ball_dir - 100) / 1.1, 30);
-                              dribblerFront.Hold(50);
+                        if (test.read() > 0) {
+                              if (test.read() < 0.5){
+                                    motor.Run();
+                                    dribblerFront.Hold(50);
+                              }else if (test.read() < 1) {
+                                    motor.Run(0, 0, 45, FRONT, 50);
+                                    dribblerFront.Hold(90);
+                              } else if (test.read() < 1.5) {
+                                    motor.Run(0, 0, 135);
+                              } else {
+                                    test.stop();
+                                    test.reset();
+                              }
                         } else {
-                              motor.Run(180, 50);
-                              dribblerFront.Stop();
+                              if (line_left_val > 70) {
+                                    motor.Run(90, 50);
+                                    dribblerFront.Stop();
+                              } else if (line_right_val > 70) {
+                                    motor.Run(-90, 50);
+                              } else if (holdFront.IsHold()) {
+                                    test.start();
+                              } else if (ball_dir == 0) {
+                                    motor.Run(180, 50);
+                              } else if (ball_dis > 50) {
+                                    motor.Run((ball_dir - 100) / 1.1, 30);
+                                    if (ball_dis > 100) dribblerFront.Hold(30);
+                              } else {
+                                    motor.Run();
+                                    dribblerFront.Stop();
+                              }
                         }
                   } else if (mode == 2) {
                         motor.Run(0, 0);

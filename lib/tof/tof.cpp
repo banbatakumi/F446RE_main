@@ -18,7 +18,7 @@ int16_t Tof::SafeDir() {
             result_vector_x += val[i] * unit_vector_x[i];
             result_vector_y += val[i] * unit_vector_y[i];
       }
-      tmp_safe_dir = atan2(result_vector_y, result_vector_x) / PI * 180.00000;
+      tmp_safe_dir = MyAtan2(result_vector_y, result_vector_x);
       return tmp_safe_dir;
 }
 

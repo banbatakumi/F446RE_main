@@ -1,6 +1,7 @@
 #ifndef MBED_TOF_H
 #define MBED_TOF_H
 
+#include "approximate_atan2.h"
 #include "mbed.h"
 
 #define PI 3.1415926535   // 円周率

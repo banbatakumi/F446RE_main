@@ -5,8 +5,7 @@
 
 class MovingAve {
      public:
-      MovingAve();
-      void Ave(int16_t *val);
+      void Compute(int16_t* input);
       void SetLength(uint8_t length);
 
      private:
