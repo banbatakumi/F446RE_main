@@ -134,7 +134,7 @@ int main() {
                               dribblerFront.Stop();
                         }
                   } else if (mode == 2) {
-                        motor.Run(0, 0, 0, RIGHT);
+                        motor.Run(0, 0);
                   }
             }
       }
@@ -257,7 +257,7 @@ void ui_rx() {
             }
       } else if (item == 3) {
             send_byte_num = 1;
-            send_byte[0] = holdFront.IsHold();
+            send_byte[0] = 9;
       }
 
       for (uint8_t i = 0; i < send_byte_num; i++) {

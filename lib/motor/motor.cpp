@@ -12,18 +12,21 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       motor_4_a = 0;
       motor_4_b = 0;
 
+      motor_1.SetLength(MOVING_AVG_LENGTH);
+      motor_2.SetLength(MOVING_AVG_LENGTH);
+      motor_3.SetLength(MOVING_AVG_LENGTH);
+      motor_4.SetLength(MOVING_AVG_LENGTH);
+
       d_timer.start();
       add_speed_timer.start();
 }
 
 void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, uint8_t robot_angle_mode, uint8_t pd_limit) {
-      uint8_t speed = moving_speed;
       int16_t power[MOTOR_QTY];
-      static int16_t tmp_power[4][MOVING_AVG_CNT_NUM];
       static uint8_t add_speed = 0;
 
       if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
-            if (encoder_val < speed * 0.1) {
+            if (encoder_val < moving_speed * 0.1) {
                   if (add_speed < 50) {
                         add_speed++;
                   }
@@ -35,16 +38,16 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             add_speed_timer.reset();
       }
 
-      if (encoder_val < speed * 0.1 || add_speed > 5) {
-            speed += add_speed * ADD_SPEED_K;
+      if (encoder_val < moving_speed * 0.1 || add_speed > 5) {
+            moving_speed += add_speed * ADD_SPEED_K;
       }
 
-      if (speed > POWER_LIMIT) {
-            speed = POWER_LIMIT;
+      if (moving_speed > POWER_LIMIT) {
+            moving_speed = POWER_LIMIT;
       }
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir - (45 + i * 90)) * speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -55,7 +58,7 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             }
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] *= float(speed) / max_power;
+            power[i] *= float(moving_speed) / max_power;
       }
 
       // PD姿勢制御
@@ -71,7 +74,6 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             pd = pd_limit * (abs(pd) / pd);
       }
 
-      if (moving_avg_cnt == MOVING_AVG_CNT_NUM) moving_avg_cnt = 0;
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
             if (robot_angle_mode == 0) {
@@ -98,16 +100,13 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             if (abs(power[i]) > POWER_LIMIT) {
                   power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);
             }
-
-            // 移動平均フィルタ
-            tmp_power[i][moving_avg_cnt] = power[i];
-            power[i] = 0;
-            for (uint8_t j = 0; j < MOVING_AVG_CNT_NUM; j++) {
-                  power[i] += tmp_power[i][j];
-            }
-            power[i] /= MOVING_AVG_CNT_NUM;
       }
-      moving_avg_cnt++;
+
+      //移動平均フィルタ
+      motor_1.Ave(&power[0]);
+      motor_2.Ave(&power[1]);
+      motor_3.Ave(&power[2]);
+      motor_4.Ave(&power[3]);
 
       // モーターへ出力
       motor_1_a = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);

@@ -2,6 +2,7 @@
 #define MBED_MOTOR_H
 
 #include "mbed.h"
+#include "moving_ave.h"
 #include "simplify_deg.h"
 #include "sin_cos_table.h"
 
@@ -16,7 +17,7 @@
 #define KD 500.000   // 姿制御微分ゲイン
 #define D_PERIOD 0.01
 
-#define MOVING_AVG_CNT_NUM 30   // 移動平均フィルタの回数
+#define MOVING_AVG_LENGTH 50   // 移動平均フィルタの回数
 
 #define MOTOR_QTY 4
 
@@ -39,6 +40,11 @@ class Motor {
       uint8_t encoder_val;
 
      private:
+      MovingAve motor_1;
+      MovingAve motor_2;
+      MovingAve motor_3;
+      MovingAve motor_4;
+
       PwmOut motor_1_a;
       PwmOut motor_1_b;
       PwmOut motor_2_a;
