@@ -7,11 +7,11 @@
 class PID {
      public:
       PID();
-      void SetGain(float kp, float ki, float kd);
-      void SetSamplingPeriod(float sampling_period);
-      void SetLimit(float limit);
+      void SetGain(float kp_, float ki_, float kd_);
+      void SetSamplingPeriod(float sampling_period_);
+      void SetLimit(float limit_);
 
-      void Compute(float input, float target);
+      void Compute(float input_, float target_);
       float Get();
 
      private:

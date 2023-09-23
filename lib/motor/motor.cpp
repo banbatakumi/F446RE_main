@@ -24,12 +24,13 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       add_speed_timer.start();
 }
 
-void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, uint8_t robot_angle_mode, uint8_t pid_limit) {
+void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
       int16_t power[MOTOR_QTY];
       static uint8_t add_speed = 0;
 
+/*
       if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
-            if (encoder_val < moving_speed * 0.1) {
+            if (encoder_val < moving_speed_ * 0.1) {
                   if (add_speed < 50) {
                         add_speed++;
                   }
@@ -41,12 +42,12 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             add_speed_timer.reset();
       }
 
-      if (encoder_val < moving_speed * 0.1 || add_speed > 5) {
-            moving_speed += add_speed * ADD_SPEED_K;
-      }
+      if (encoder_val < moving_speed_ * 0.1 || add_speed > 5) {
+            moving_speed_ += add_speed * ADD_SPEED_K;
+      }*/
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = MySin(moving_dir_ - (45 + i * 90)) * moving_speed_ * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -57,31 +58,31 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
             }
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] *= float(moving_speed) / max_power;
+            power[i] *= float(moving_speed_) / max_power;
       }
 
       // PID姿勢制御
-      attitudeControlPID.Compute(yaw, robot_angle);
-      attitudeControlPID.SetLimit(pid_limit);
+      attitudeControlPID.Compute(yaw, robot_angle_);
+      attitudeControlPID.SetLimit(pid_limit_);
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
             float tmp_pid = attitudeControlPID.Get();
-            if (robot_angle_mode == 0) {
+            if (robot_angle_mode_ == 0) {
                   power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
-            } else if (robot_angle_mode == 1) {   // ボールを前に捕捉した状態
+            } else if (robot_angle_mode_ == 1) {   // ボールを前に捕捉した状態
                   if (i == 1 || i == 2) {
                         power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
                   }
-            } else if (robot_angle_mode == 2) {   // ボールを右に捕捉した状態
+            } else if (robot_angle_mode_ == 2) {   // ボールを右に捕捉した状態
                   if (i == 2 || i == 3) {
                         power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
                   }
-            } else if (robot_angle_mode == 3) {   // ボールを後ろに捕捉した状態
+            } else if (robot_angle_mode_ == 3) {   // ボールを後ろに捕捉した状態
                   if (i == 0 || i == 3) {
                         power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
                   }
-            } else if (robot_angle_mode == 4) {   // ボールを左に捕捉した状態
+            } else if (robot_angle_mode_ == 4) {   // ボールを左に捕捉した状態
                   if (i == 0 || i == 1) {
                         power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
                   }
@@ -110,18 +111,18 @@ void Motor::Run(int16_t moving_dir, uint8_t moving_speed, int16_t robot_angle, u
       motor_4_b = abs(power[3]) < MIN_BRAKE ? 1 : (power[3] < 0 ? power[3] * -0.01000 : 0);
 }
 
-void Motor::SetPwmPeriod(uint16_t pwm_period) {
-      motor_1_a.period_us(pwm_period);
-      motor_1_b.period_us(pwm_period);
-      motor_2_a.period_us(pwm_period);
-      motor_2_b.period_us(pwm_period);
-      motor_3_a.period_us(pwm_period);
-      motor_3_b.period_us(pwm_period);
-      motor_4_a.period_us(pwm_period);
-      motor_4_b.period_us(pwm_period);
+void Motor::SetPwmPeriod(uint16_t pwm_period_) {
+      motor_1_a.period_us(pwm_period_);
+      motor_1_b.period_us(pwm_period_);
+      motor_2_a.period_us(pwm_period_);
+      motor_2_b.period_us(pwm_period_);
+      motor_3_a.period_us(pwm_period_);
+      motor_3_b.period_us(pwm_period_);
+      motor_4_a.period_us(pwm_period_);
+      motor_4_b.period_us(pwm_period_);
 }
 
-void Motor::Brake(uint16_t brake_time) {
+void Motor::Brake(uint16_t brake_time_) {
       motor_1_a = 1;
       motor_1_b = 1;
       motor_2_a = 1;
@@ -130,7 +131,7 @@ void Motor::Brake(uint16_t brake_time) {
       motor_3_b = 1;
       motor_4_a = 1;
       motor_4_b = 1;
-      wait_us(brake_time * 1000);
+      wait_us(brake_time_ * 1000);
 }
 
 void Motor::Free() {

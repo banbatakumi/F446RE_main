@@ -7,24 +7,24 @@ PID::PID() {
       sampling_timer.start();
 }
 
-void PID::SetGain(float kp, float ki, float kd) {
-      this->kp = kp;
-      this->ki = ki;
-      this->kd = kd;
+void PID::SetGain(float kp_, float ki_, float kd_) {
+      this->kp = kp_;
+      this->ki = ki_;
+      this->kd = kd_;
 }
 
-void PID::SetSamplingPeriod(float sampling_period) {
-      this->sampling_period = sampling_period;
+void PID::SetSamplingPeriod(float sampling_period_) {
+      this->sampling_period = sampling_period_;
 }
 
-void PID::SetLimit(float limit) {
-      this->limit = limit;
+void PID::SetLimit(float limit_) {
+      this->limit = limit_;
 }
 
-void PID::Compute(float input, float target) {
+void PID::Compute(float input_, float target_) {
       if (sampling_timer.read() > sampling_period) {
             pre_p = p;
-            p = SimplifyDeg(target - input);   // 比例
+            p = SimplifyDeg(target_ - input_);   // 比例
             d = (p - pre_p) * sampling_timer.read();   // 微分
             i += (p + pre_p) * sampling_timer.read();
 

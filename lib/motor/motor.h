@@ -17,7 +17,7 @@
 #define KD 500.000   // 姿制御微分ゲイン
 #define PID_SAMPLING_PERIOD 0.01
 
-#define MOVING_AVG_LENGTH 25   // 移動平均フィルタの回数
+#define MOVING_AVG_LENGTH 50   // 移動平均フィルタの回数
 
 #define MOTOR_QTY 4
 
@@ -26,9 +26,9 @@
 class Motor {
      public:
       Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_);
-      void Run(int16_t moving_dir = 0, uint8_t moving_speed = 0, int16_t robot_angle = 0, uint8_t robot_angle_mode = 0, uint8_t pid_limit = POWER_LIMIT);
-      void SetPwmPeriod(uint16_t pwm_period = 30000);
-      void Brake(uint16_t brake_time = 0);
+      void Run(int16_t moving_dir_ = 0, uint8_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t robot_angle_mode_ = 0, uint8_t pid_limit_ = POWER_LIMIT);
+      void SetPwmPeriod(uint16_t pwm_period_ = 30000);
+      void Brake(uint16_t brake_time_ = 0);
       void Free();
 
 #define FRONT 1

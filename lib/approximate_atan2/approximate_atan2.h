@@ -3,6 +3,6 @@
 
 #include "mbed.h"
 
-int16_t MyAtan2(int16_t _y, int16_t _x, uint8_t _accuracy_level = 2);
+int16_t MyAtan2(int16_t y_, int16_t x_, uint8_t accuracy_level_ = 2);
 
 #endif

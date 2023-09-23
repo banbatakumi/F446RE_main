@@ -2,6 +2,7 @@
 #define MBED_DRIBBLER_H
 
 #include "mbed.h"
+#include "moving_ave.h"
 
 #define MOTOR_FREQUENCY 30000   // モーターのPWM周波数
 
@@ -9,13 +10,14 @@ class Dribbler {
      public:
       Dribbler(PinName motor_a_, PinName motor_b_);
 
-      void SetPwmPeriod(uint16_t pwm_period = 30000);
+      void SetPwmPeriod(uint16_t pwm_period_ = 30000);
 
-      void Hold(uint8_t speed = 50);
+      void Hold(uint8_t speed_ = 50);
       void Kick();
       void Stop();
 
      private:
+      MovingAve motorAve;
       PwmOut motor_a;
       DigitalOut motor_b;
 };

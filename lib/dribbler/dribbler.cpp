@@ -5,13 +5,17 @@
 Dribbler::Dribbler(PinName motor_a_, PinName motor_b_) : motor_a(motor_a_), motor_b(motor_b_) {
       motor_a = 0;
       motor_b = 0;
+
+      motorAve.SetLength(100);
 }
 
-void Dribbler::SetPwmPeriod(uint16_t pwm_period) {
-      motor_a.period_us(pwm_period);
+void Dribbler::SetPwmPeriod(uint16_t pwm_period_) {
+      motor_a.period_us(pwm_period_);
 }
 
-void Dribbler::Hold(uint8_t speed) {
+void Dribbler::Hold(uint8_t speed_) {
+      int16_t speed = speed_;
+      motorAve.Compute(&speed);
       motor_a = speed / 100.000;
       motor_b = 0;
 }
@@ -24,4 +28,5 @@ void Dribbler::Kick() {
 void Dribbler::Stop() {
       motor_a = 0;
       motor_b = 0;
+      motorAve.Reset();
 }

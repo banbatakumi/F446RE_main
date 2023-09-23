@@ -186,6 +186,6 @@
 #define COS89 0.0174524064372836
 #define COS90 0
 
-float MySin(int theta);
-float MyCos(int theta);
+float MySin(int theta_);
+float MyCos(int theta_);
 #endif

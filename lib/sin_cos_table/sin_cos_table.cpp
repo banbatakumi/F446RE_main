@@ -1,19 +1,19 @@
 #include "sin_cos_table.h"
 
-float MySin(int theta) {
+float MySin(int theta_) {
       float ret;
       int theta_cal;
-      while (theta < 0) {
-            theta += 360;
+      while (theta_ < 0) {
+            theta_ += 360;
       }
-      if (theta >= 360) {
-            theta = theta % 360;   // 余り=0~359の数値
+      if (theta_ >= 360) {
+            theta_ = theta_ % 360;   // 余り=0~359の数値
       }
-      theta_cal = theta % 90;
-      if (theta >= 90 && theta < 180) {
+      theta_cal = theta_ % 90;
+      if (theta_ >= 90 && theta_ < 180) {
             theta_cal = 90 - theta_cal;
       }
-      if (theta >= 270 && theta < 360) {
+      if (theta_ >= 270 && theta_ < 360) {
             theta_cal = 90 - theta_cal;
       }
 
@@ -201,34 +201,34 @@ float MySin(int theta) {
             ret = SIN90;
       }
 
-      if (theta >= 0 && theta <= 90) {
+      if (theta_ >= 0 && theta_ <= 90) {
             // 0~90
-      } else if (theta > 90 && theta <= 180) {
+      } else if (theta_ > 90 && theta_ <= 180) {
             // 91~180
-      } else if (theta > 180 && theta <= 270) {
+      } else if (theta_ > 180 && theta_ <= 270) {
             // 181~270
             ret = -ret;
-      } else if (theta > 270 && theta < 360) {
+      } else if (theta_ > 270 && theta_ < 360) {
             // 271~360
             ret = -ret;
       }
       return ret;
 }
 
-float MyCos(int theta) {
+float MyCos(int theta_) {
       float ret;
       int theta_cal;
-      while (theta < 0) {
-            theta += 360;
+      while (theta_ < 0) {
+            theta_ += 360;
       }
-      if (theta >= 360) {
-            theta = theta % 360;   // 余り=0~359の数値
+      if (theta_ >= 360) {
+            theta_ = theta_ % 360;   // 余り=0~359の数値
       }
-      theta_cal = theta % 90;
-      if (theta >= 90 && theta < 180) {
+      theta_cal = theta_ % 90;
+      if (theta_ >= 90 && theta_ < 180) {
             theta_cal = 90 - theta_cal;
       }
-      if (theta >= 270 && theta < 360) {
+      if (theta_ >= 270 && theta_ < 360) {
             theta_cal = 90 - theta_cal;
       }
 
@@ -416,15 +416,15 @@ float MyCos(int theta) {
             ret = COS90;
       }
 
-      if (theta >= 0 && theta <= 90) {
+      if (theta_ >= 0 && theta_ <= 90) {
             // 0~90
-      } else if (theta > 90 && theta <= 180) {
+      } else if (theta_ > 90 && theta_ <= 180) {
             // 91~180
             ret = -ret;
-      } else if (theta > 180 && theta <= 270) {
+      } else if (theta_ > 180 && theta_ <= 270) {
             // 181~270
             ret = -ret;
-      } else if (theta > 270 && theta < 360) {
+      } else if (theta_ > 270 && theta_ < 360) {
             // 271~360
       }
       return ret;
