@@ -7,11 +7,13 @@ int16_t MyAtan2(int16_t y_, int16_t x_, uint8_t accuracy_level_) {
       bool c;
 
       c = y < x;
-      if (c)
+      if (c == 1) {
             z = (float)y / x;
-      else
+      } else {
             z = (float)x / y;
+      }
 
+      // ４次曲線になるほど精度が悪くなる
       int16_t a;
       if (accuracy_level_ = 0) {
             a = z * (-1556 * z + 6072);   // 2次曲線近似
@@ -21,7 +23,7 @@ int16_t MyAtan2(int16_t y_, int16_t x_, uint8_t accuracy_level_) {
             a = z * (z * (z * (829 * z - 2011) - 58) + 5741);   // 4次曲線近似
       }
 
-      if (c) {
+      if (c == 1) {
             if (x_ > 0) {
                   if (y_ < 0) a *= -1;
             }
@@ -31,7 +33,7 @@ int16_t MyAtan2(int16_t y_, int16_t x_, uint8_t accuracy_level_) {
             }
       }
 
-      if (!c) {
+      if (c != 1) {
             if (x_ > 0) {
                   if (y_ > 0) a = 9000 - a;
                   if (y_ < 0) a = a - 9000;

@@ -6,9 +6,9 @@
 #include "tof.h"
 #include "voltage.h"
 
-#define PI 3.1415926535   // 円周率
+#define PI 3.1415926535
 
-#define CUT_VOLTAGE 6.0   // 全機能強制終了する電圧
+#define CUT_VOLTAGE 3.0   // 全機能強制終了する電圧
 #define VOLTAGE_CNT_NUM 500   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 #define MOTOR_PWM_PERIOD 30000   // モーターのPWM周波数(default: 30000)
@@ -29,14 +29,12 @@ RawSerial ui(PC_10, PC_11);
 RawSerial lidar(PC_12, PD_2);
 RawSerial cam(PA_0, PA_1);
 
-// 関数定義
 void line_rx();
 void imu_rx();
 void ui_rx();
 void lidar_rx();
 void cam_rx();
 
-// ピン定義
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
 Dribbler dribblerFront(PB_6, PB_7);
@@ -57,6 +55,7 @@ uint8_t mode = 0;
 uint8_t moving_speed;
 uint8_t line_left_val;
 uint8_t line_right_val;
+uint8_t dribbler_sig = 0;
 
 uint8_t ball_dir;
 uint8_t ball_dis;
@@ -73,6 +72,7 @@ uint16_t voltage_cnt;
 Timer test;
 
 int main() {
+      // UART初期設定
       line.baud(LINE_UART_SPEED);
       // line.attach(line_rx, Serial::RxIrq);
       imu.baud(IMU_UART_SPEED);
@@ -118,6 +118,25 @@ int main() {
 
                   if (mode == 0) {
                         motor.Free();
+
+                        switch (dribbler_sig) {
+                              case 0:
+                                    dribblerFront.Stop();
+                                    dribblerBack.Stop();
+                                    break;
+                              case 1:
+                                    dribblerFront.Hold(90);
+                                    break;
+                              case 2:
+                                    dribblerFront.Kick();
+                                    break;
+                              case 3:
+                                    dribblerBack.Hold(90);
+                                    break;
+                              case 4:
+                                    dribblerBack.Kick();
+                                    break;
+                        }
                   } else if (mode == 1) {
                         if (test.read() > 0) {
                               if (test.read() < 0.5) {
@@ -147,7 +166,7 @@ int main() {
                                     if (ball_dis > 75) {
                                           dribblerFront.Hold(50);
                                           motor.Run(ball_dir - 100, 25);
-                                    }else{
+                                    } else {
                                           dribblerFront.Stop();
                                           motor.Run(ball_dir - 100, 50);
                                     }
@@ -214,7 +233,6 @@ void imu_rx() {
 
 void ui_rx() {
       static int8_t item = 0;
-      static uint8_t dribbler_sig = 0;
 
       if (ui.getc() == 0xFF) {   // ヘッダーがあることを確認
             const uint8_t recv_byte_num = 6;
@@ -241,29 +259,8 @@ void ui_rx() {
             }
       }
 
-      if (mode == 0) {
-            switch (dribbler_sig) {
-                  case 0:
-                        dribblerFront.Stop();
-                        dribblerBack.Stop();
-                        break;
-                  case 1:
-                        dribblerFront.Hold(90);
-                        break;
-                  case 2:
-                        dribblerFront.Kick();
-                        break;
-                  case 3:
-                        dribblerBack.Hold(90);
-                        break;
-                  case 4:
-                        dribblerBack.Kick();
-                        break;
-            }
-      }
-
       uint8_t send_byte_num;
-      uint8_t send_byte[20];
+      uint8_t send_byte[25];
       send_byte[0] = 0xFF;
 
       if (item == 0) {
@@ -274,16 +271,17 @@ void ui_rx() {
             send_byte[1] = yaw > 0 ? yaw : 0;
             send_byte[2] = yaw < 0 ? yaw * -1 : 0;
       } else if (item == 2) {
-            send_byte_num = 20;
+            send_byte_num = 21;
             send_byte[1] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
             send_byte[2] = tof.SafeDir() < 0 ? tof.SafeDir() * -1 : 0;
             send_byte[3] = tof.MinSensor();
+            send_byte[4] = tof.FindWall();
             for (uint8_t i = 0; i < 16; i++) {
-                  send_byte[i + 4] = tof.val[i];
+                  send_byte[i + 5] = tof.val[i];
             }
       } else if (item == 3) {
             send_byte_num = 1;
-            send_byte[0] = ball_dis;
+            send_byte[0] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
       }
 
       for (uint8_t i = 0; i < send_byte_num; i++) {
