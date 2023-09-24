@@ -157,18 +157,18 @@ int main() {
                                     dribblerFront.Stop();
                               } else if (line_right_val > 70) {
                                     motor.Run(-90, 80);
-                              } else if (holdFront.IsHold()) {
+                              } else if (holdFront.IsHold() && ball_dis > 150) {
                                     test.start();
                               } else if (ball_dir == 0) {
                                     motor.Run(180, 60);
                                     dribblerFront.Stop();
-                              } else if (ball_dis > 50) {
-                                    if (ball_dis > 75) {
+                              } else if (ball_dis > 30) {
+                                    if (ball_dis > 70) {
                                           dribblerFront.Hold(50);
-                                          motor.Run(ball_dir - 100, 25);
+                                          motor.Run(1.1 * (ball_dir - 100), 25);
                                     } else {
                                           dribblerFront.Stop();
-                                          motor.Run(ball_dir - 100, 50);
+                                          motor.Run(1.1 * (ball_dir - 100), 50);
                                     }
                               } else {
                                     motor.Run();
@@ -177,7 +177,7 @@ int main() {
                         }
                   } else if (mode == 2) {
                         motor.Run(0, 0);
-                        dribblerFront.Hold();
+                        dribblerFront.Stop();
                   }
             }
       }
@@ -281,7 +281,7 @@ void ui_rx() {
             }
       } else if (item == 3) {
             send_byte_num = 1;
-            send_byte[0] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
+            send_byte[0] = ball_dis;
       }
 
       for (uint8_t i = 0; i < send_byte_num; i++) {

@@ -14,7 +14,7 @@
 
 #define KP 1.000   // 姿勢制御比例ゲイン
 #define KI 0   // 姿制御積分ゲイン
-#define KD 500.000   // 姿制御微分ゲイン
+#define KD 0.070   // 姿制御微分ゲイン
 #define PID_SAMPLING_PERIOD 0.01
 
 #define MOVING_AVG_LENGTH 50   // 移動平均フィルタの回数

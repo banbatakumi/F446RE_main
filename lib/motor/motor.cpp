@@ -19,6 +19,7 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
 
       attitudeControlPID.SetGain(KP, KI, KD);
       attitudeControlPID.SetSamplingPeriod(PID_SAMPLING_PERIOD);
+      attitudeControlPID.SelectType(PI_D_TYPE);
 
       d_timer.start();
       add_speed_timer.start();
@@ -28,23 +29,23 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       int16_t power[MOTOR_QTY];
       static uint8_t add_speed = 0;
 
-/*
-      if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
-            if (encoder_val < moving_speed_ * 0.1) {
-                  if (add_speed < 50) {
-                        add_speed++;
+      /*
+            if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
+                  if (encoder_val < moving_speed_ * 0.1) {
+                        if (add_speed < 50) {
+                              add_speed++;
+                        }
+                  } else {
+                        if (add_speed > 5) {
+                              add_speed -= 2;
+                        }
                   }
-            } else {
-                  if (add_speed > 5) {
-                        add_speed -= 2;
-                  }
+                  add_speed_timer.reset();
             }
-            add_speed_timer.reset();
-      }
 
-      if (encoder_val < moving_speed_ * 0.1 || add_speed > 5) {
-            moving_speed_ += add_speed * ADD_SPEED_K;
-      }*/
+            if (encoder_val < moving_speed_ * 0.1 || add_speed > 5) {
+                  moving_speed_ += add_speed * ADD_SPEED_K;
+            }*/
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             power[i] = MySin(moving_dir_ - (45 + i * 90)) * moving_speed_ * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更

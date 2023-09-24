@@ -21,14 +21,31 @@ void PID::SetLimit(float limit_) {
       this->limit = limit_;
 }
 
+void PID::SelectType(uint8_t type_) {
+      this->type = type_;
+}
+
 void PID::Compute(float input_, float target_) {
       if (sampling_timer.read() > sampling_period) {
-            pre_p = p;
-            p = SimplifyDeg(target_ - input_);   // 比例
-            d = (p - pre_p) * sampling_timer.read();   // 微分
-            i += (p + pre_p) * sampling_timer.read();   // 積分
+            if (type == 0) {
+                  p = SimplifyDeg(target_ - input_);   // 比例
+                  d = (p - pre_p) / sampling_timer.read();   // 微分
+                  i += (p + pre_p) * sampling_timer.read();   // 積分
+                  pre_p = p;
 
-            pid = p * kp + i * ki + d * kd;
+                  pid = p * kp + i * ki + d * kd;
+            } else if (type == 1) {
+                  p = SimplifyDeg(target_ - input_);   // 比例
+                  d = (input_ - pre_input) / sampling_timer.read();   // 微分
+                  i += (p + pre_p) * sampling_timer.read();   // 積分
+                  pre_p = p;
+                  pre_input = input_;
+
+                  
+
+                  pid = p * kp + i * ki + d * kd * -1;
+            }
+
             if (abs(pid) > limit) {
                   pid = limit * (abs(pid) / pid);
             }
