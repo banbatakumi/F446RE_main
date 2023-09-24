@@ -3,6 +3,7 @@
 
 #include "approximate_atan2.h"
 #include "mbed.h"
+#include "sin_cos_table.h"
 
 #define PI 3.1415926535   // 円周率
 
@@ -13,6 +14,7 @@ class Tof {
       Tof();
       int16_t SafeDir();
       uint8_t MinSensor();
+      uint8_t FindWall();
 
       uint8_t val[TOF_QTY];
 
