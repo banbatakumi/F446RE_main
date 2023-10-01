@@ -27,11 +27,12 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
 
 void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
       int16_t power[MOTOR_QTY];
+      uint8_t moving_speed = moving_speed_;
       static uint8_t add_speed = 0;
 
       /*
             if (add_speed_timer.read() > ADD_SPEED_PERIOD) {
-                  if (encoder_val < moving_speed_ * 0.1) {
+                  if (encoder_val < moving_speed * 0.1) {
                         if (add_speed < 50) {
                               add_speed++;
                         }
@@ -43,12 +44,14 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
                   add_speed_timer.reset();
             }
 
-            if (encoder_val < moving_speed_ * 0.1 || add_speed > 5) {
-                  moving_speed_ += add_speed * ADD_SPEED_K;
+            if (encoder_val < moving_speed * 0.1 || add_speed > 5) {
+                  moving_speed += add_speed * ADD_SPEED_K;
             }*/
 
+      if (moving_speed > POWER_LIMIT) moving_speed = POWER_LIMIT;
+
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir_ - (45 + i * 90)) * moving_speed_ * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = MySin(moving_dir_ - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -65,10 +68,10 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       // PID姿勢制御
       attitudeControlPID.Compute(yaw, robot_angle_);
       attitudeControlPID.SetLimit(pid_limit_);
+      float tmp_pid = attitudeControlPID.Get();
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
-            float tmp_pid = attitudeControlPID.Get();
             if (robot_angle_mode_ == 0) {
                   power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
             } else if (robot_angle_mode_ == 1) {   // ボールを前に捕捉した状態

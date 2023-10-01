@@ -8,7 +8,7 @@
 
 #define PI 3.1415926535
 
-#define CUT_VOLTAGE 3.0   // 全機能強制終了する電圧
+#define CUT_VOLTAGE 6.0   // 全機能強制終了する電圧
 #define VOLTAGE_CNT_NUM 500   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 #define MOTOR_PWM_PERIOD 30000   // モーターのPWM周波数(default: 30000)
@@ -46,6 +46,9 @@ Tof tof;
 DigitalOut led_1(PA_5);
 DigitalOut led_2(PA_6);
 
+DigitalOut kicker_sig_1(PC_0);
+DigitalOut kicker_sig_2(PC_1);
+
 // グローバル変数定義
 int16_t yaw = 0;
 uint8_t is_yaw_correction = 0;
@@ -57,12 +60,12 @@ uint8_t line_left_val;
 uint8_t line_right_val;
 uint8_t dribbler_sig = 0;
 
-uint8_t ball_dir;
+int16_t ball_dir;
 uint8_t ball_dis;
-uint8_t y_goal_dir;
+int16_t y_goal_dir;
 uint8_t y_goal_dis;
 uint8_t y_goal_size;
-uint8_t b_goal_dir;
+int16_t b_goal_dir;
 uint8_t b_goal_dis;
 uint8_t b_goal_size;
 
@@ -109,75 +112,16 @@ int main() {
                   holdFront.Read();
                   holdBack.Read();
 
-                  if (line.readable() == 1) {
-                        line_rx();
-                  }
-                  if (cam.readable() == 1) {
-                        cam_rx();
-                  }
+                  if (line.readable() == 1) line_rx();
+                  if (cam.readable() == 1) cam_rx();
 
                   if (mode == 0) {
                         motor.Free();
-
-                        switch (dribbler_sig) {
-                              case 0:
-                                    dribblerFront.Stop();
-                                    dribblerBack.Stop();
-                                    break;
-                              case 1:
-                                    dribblerFront.Hold(90);
-                                    break;
-                              case 2:
-                                    dribblerFront.Kick();
-                                    break;
-                              case 3:
-                                    dribblerBack.Hold(90);
-                                    break;
-                              case 4:
-                                    dribblerBack.Kick();
-                                    break;
-                        }
+                        kicker_sig_1 = 0;
+                        kicker_sig_2 = 0;
                   } else if (mode == 1) {
-                        if (test.read() > 0) {
-                              if (test.read() < 0.5) {
-                                    motor.Run();
-                                    dribblerFront.Hold(90);
-                              } else if (test.read() < 1) {
-                                    motor.Run(0, 0, 60, FRONT, 50);
-                                    dribblerFront.Hold(100);
-                              } else if (test.read() < 1.5) {
-                                    motor.Run(0, 0, 135);
-                              } else {
-                                    test.stop();
-                                    test.reset();
-                              }
-                        } else {
-                              if (line_left_val > 70) {
-                                    motor.Run(90, 80);
-                                    dribblerFront.Stop();
-                              } else if (line_right_val > 70) {
-                                    motor.Run(-90, 80);
-                              } else if (holdFront.IsHold() && ball_dis > 150) {
-                                    test.start();
-                              } else if (ball_dir == 0) {
-                                    motor.Run(180, 60);
-                                    dribblerFront.Stop();
-                              } else if (ball_dis > 30) {
-                                    if (ball_dis > 70) {
-                                          dribblerFront.Hold(50);
-                                          motor.Run(1.1 * (ball_dir - 100), 25);
-                                    } else {
-                                          dribblerFront.Stop();
-                                          motor.Run(1.1 * (ball_dir - 100), 50);
-                                    }
-                              } else {
-                                    motor.Run();
-                                    dribblerFront.Stop();
-                              }
-                        }
+                        motor.Run(ball_dir, 20);
                   } else if (mode == 2) {
-                        motor.Run(0, 0);
-                        dribblerFront.Stop();
                   }
             }
       }
@@ -201,9 +145,7 @@ void line_rx() {
             while (line.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
                   line.getc();   // データは格納されない
                   n++;
-                  if (n > EMPTY_READ_BUF_TIMES) {
-                        break;
-                  }
+                  if (n > EMPTY_READ_BUF_TIMES) break;
             }
       }
 }
@@ -224,9 +166,7 @@ void imu_rx() {
             while (imu.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
                   imu.getc();   // データは格納されない
                   n++;
-                  if (n > EMPTY_READ_BUF_TIMES) {
-                        break;
-                  }
+                  if (n > EMPTY_READ_BUF_TIMES) break;
             }
       }
 }
@@ -234,6 +174,7 @@ void imu_rx() {
 void ui_rx() {
       static int8_t item = 0;
 
+      // データ受信
       if (ui.getc() == 0xFF) {   // ヘッダーがあることを確認
             const uint8_t recv_byte_num = 6;
             uint8_t recv_byte[recv_byte_num];
@@ -253,12 +194,30 @@ void ui_rx() {
             while (ui.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
                   ui.getc();   // データは格納されない
                   n++;
-                  if (n > EMPTY_READ_BUF_TIMES) {
-                        break;
-                  }
+                  if (n > EMPTY_READ_BUF_TIMES) break;
             }
       }
 
+      switch (dribbler_sig) {
+            case 0:
+                  dribblerFront.Stop();
+                  dribblerBack.Stop();
+                  break;
+            case 1:
+                  dribblerFront.Hold(90);
+                  break;
+            case 2:
+                  dribblerFront.Kick();
+                  break;
+            case 3:
+                  dribblerBack.Hold(90);
+                  break;
+            case 4:
+                  dribblerBack.Kick();
+                  break;
+      }
+
+      // データ送信
       uint8_t send_byte_num;
       uint8_t send_byte[25];
       send_byte[0] = 0xFF;
@@ -268,8 +227,8 @@ void ui_rx() {
             send_byte[0] = uint8_t(voltage.Get() * 10);
       } else if (item == 1) {
             send_byte_num = 3;
-            send_byte[1] = yaw > 0 ? yaw : 0;
-            send_byte[2] = yaw < 0 ? yaw * -1 : 0;
+            send_byte[1] = ball_dir > 0 ? ball_dir : 0;
+            send_byte[2] = ball_dir < 0 ? ball_dir * -1 : 0;
       } else if (item == 2) {
             send_byte_num = 21;
             send_byte[1] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
@@ -307,39 +266,33 @@ void lidar_rx() {
             while (lidar.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
                   lidar.getc();   // データは格納されない
                   n++;
-                  if (n > EMPTY_READ_BUF_TIMES) {
-                        break;
-                  }
+                  if (n > EMPTY_READ_BUF_TIMES) break;
             }
       }
 }
 
 void cam_rx() {
       if (cam.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 9;
+            const uint8_t recv_byte_num = 4;
             uint8_t recv_byte[recv_byte_num];
+
+            uint8_t ball_dir_plus, ball_dir_minus;
 
             for (int i = 0; i < recv_byte_num; i++) {
                   recv_byte[i] = cam.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-                  ball_dir = recv_byte[0];
-                  ball_dis = recv_byte[1];
-                  y_goal_dir = recv_byte[2];
-                  y_goal_dis = recv_byte[3];
-                  y_goal_size = recv_byte[4];
-                  b_goal_dir = recv_byte[5];
-                  b_goal_dis = recv_byte[6];
-                  b_goal_size = recv_byte[7];
+                  ball_dir_plus = recv_byte[0];
+                  ball_dir_minus = recv_byte[1];
+                  ball_dis = recv_byte[2];
+                  ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
             }
 
             uint8_t n = 0;
             while (cam.readable() == 1) {   // 受信データがなくなるまで読み続ける・受信バッファを空にする
                   cam.getc();   // データは格納されない
                   n++;
-                  if (n > EMPTY_READ_BUF_TIMES) {
-                        break;
-                  }
+                  if (n > EMPTY_READ_BUF_TIMES) break;
             }
       }
 }

@@ -4,8 +4,8 @@
 
 Tof::Tof() {
       for (uint8_t i = 0; i < TOF_QTY; i++) {   // それぞれのセンサにベクトルを与える
-            unit_vector_x[i] = cos((i * 360.00000 / TOF_QTY) * PI / 180.00000);
-            unit_vector_y[i] = sin((i * 360.00000 / TOF_QTY) * PI / 180.00000);
+            unit_vector_x[i] = MyCos(i * 360.00000 / TOF_QTY);
+            unit_vector_y[i] = MySin(i * 360.00000 / TOF_QTY);
       }
 }
 
@@ -44,19 +44,20 @@ uint8_t Tof::FindWall() {
 
       min_wall = abs(val[2] - MyCos(45) * val[0]) + abs(val[2] - MyCos(22.5) * val[1]) + abs(val[2] - MyCos(22.5) * val[3]) + abs(val[2] - MyCos(45) * val[4]);
       for (uint8_t i = 0; i < TOF_QTY; i++) {
-            uint8_t i_1 = i + 1;
-            uint8_t i_2 = i + 2;
-            uint8_t i_3 = i + 3;
-            uint8_t i_4 = i + 4;
-            if (i_1 > 15) i_1 -= 16;
-            if (i_2 > 15) i_2 -= 16;
-            if (i_3 > 15) i_3 -= 16;
-            if (i_4 > 15) i_4 -= 16;
+            uint8_t j[5];
+            for (uint8_t k = 0; k < 5; k++) {
+                  j[k] = i + k - 2;
+                  if (j[k] > 15) j[k] -= 16;
+            }
 
-            wall = abs(val[i_2] - MyCos(45) * val[i]) + abs(val[i_2] - MyCos(22.5) * val[i_1]) + abs(val[i_2] - MyCos(22.5) * val[i_3]) + abs(val[i_2] - MyCos(45) * val[i_4]);
+            wall = abs(val[j[2]] - MyCos(45) * val[j[0]]);
+            wall += abs(val[j[2]] - MyCos(22.5) * val[j[1]]);
+            wall += abs(val[j[2]] - MyCos(22.5) * val[j[3]]);
+            wall += abs(val[j[2]] - MyCos(45) * val[j[4]]);
+
             if (wall < min_wall) {   // 最小値よりもval[i] の方が小さければ最小値を更新
                   min_wall = wall;
-                  min_wall_num = i_2;
+                  min_wall_num = j[2];
             }
       }
 
