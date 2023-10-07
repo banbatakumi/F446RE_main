@@ -14,7 +14,6 @@ class Tof {
       Tof();
       int16_t SafeDir();
       uint8_t MinSensor();
-      uint8_t FindWall();
 
       uint8_t val[TOF_QTY];
 

@@ -4,7 +4,7 @@
 #include "mbed.h"
 
 #define RC 0.5
-#define CATCH_TH 100
+#define CATCH_TH 30
 
 class Hold {
      public:

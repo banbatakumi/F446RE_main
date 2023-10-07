@@ -36,30 +36,3 @@ uint8_t Tof::MinSensor() {
 
       return min_val_sensor_num;
 }
-
-uint8_t Tof::FindWall() {
-      int16_t wall;
-      int16_t min_wall;
-      int16_t min_wall_num;
-
-      min_wall = abs(val[2] - MyCos(45) * val[0]) + abs(val[2] - MyCos(22.5) * val[1]) + abs(val[2] - MyCos(22.5) * val[3]) + abs(val[2] - MyCos(45) * val[4]);
-      for (uint8_t i = 0; i < TOF_QTY; i++) {
-            uint8_t j[5];
-            for (uint8_t k = 0; k < 5; k++) {
-                  j[k] = i + k - 2;
-                  if (j[k] > 15) j[k] -= 16;
-            }
-
-            wall = abs(val[j[2]] - MyCos(45) * val[j[0]]);
-            wall += abs(val[j[2]] - MyCos(22.5) * val[j[1]]);
-            wall += abs(val[j[2]] - MyCos(22.5) * val[j[3]]);
-            wall += abs(val[j[2]] - MyCos(45) * val[j[4]]);
-
-            if (wall < min_wall) {   // 最小値よりもval[i] の方が小さければ最小値を更新
-                  min_wall = wall;
-                  min_wall_num = j[2];
-            }
-      }
-
-      return min_wall_num;
-}
