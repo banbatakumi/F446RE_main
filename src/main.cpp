@@ -1,5 +1,6 @@
 #include "dribbler.h"
 #include "hold.h"
+#include "kicker.h"
 #include "mbed.h"
 #include "motor.h"
 #include "pid.h"
@@ -9,8 +10,6 @@
 
 #define CUT_VOLTAGE 4.0   // 全機能強制終了する電圧
 #define VOLTAGE_CNT_NUM 1000   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
-
-#define MOTOR_PWM_PERIOD 30000   // モーターのPWM周波数(default: 30000)
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define LINE_UART_SPEED 57600
@@ -43,13 +42,11 @@ Dribbler dribblerFront(PB_6, PB_7);
 Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
+Kicker kicker(PC_0, PC_1);
 Tof tof;
 
 DigitalOut led_1(PA_5);
 DigitalOut led_2(PA_6);
-
-DigitalOut kicker_sig_1(PC_0);
-DigitalOut kicker_sig_2(PC_1);
 
 // グローバル変数定義
 int16_t yaw = 0;
@@ -60,7 +57,6 @@ uint8_t mode = 0;
 uint8_t moving_speed;
 uint8_t line_left_val;
 uint8_t line_right_val;
-uint8_t kicker_sig = 0;
 
 int16_t ball_dir;
 uint8_t ball_dis;
@@ -71,8 +67,6 @@ uint8_t b_goal_size;
 
 bool is_voltage_decrease = 0;
 uint16_t voltage_cnt;
-
-Timer test;
 
 int main() {
       // UART初期設定
@@ -85,16 +79,18 @@ int main() {
       lidar.baud(LIDAR_UART_SPEED);
       lidar.attach(&lidar_rx);
       cam.baud(CAM_UART_SPEED);
-      //cam.attach(&cam_rx);
+      // cam.attach(&cam_rx);
 
-      motor.SetPwmPeriod(MOTOR_PWM_PERIOD);
-      dribblerFront.SetPwmPeriod(MOTOR_PWM_PERIOD);
-      dribblerBack.SetPwmPeriod(MOTOR_PWM_PERIOD);
+      motor.SetPwmPeriod(30000);
+      dribblerFront.SetPwmPeriod(30000);
+      dribblerBack.SetPwmPeriod(30000);
 
       offencePID.SetGain(0.5, 0, 15);
       offencePID.SetSamplingPeriod(0.01);
       offencePID.SetLimit(70);
       offencePID.SelectType(PI_D_TYPE);
+
+      kicker.SetKickTime(100);
 
       while (1) {
             voltage.Read();
@@ -104,9 +100,8 @@ int main() {
             } else {
                   voltage_cnt = 0;
             }
-            if (voltage_cnt >= VOLTAGE_CNT_NUM) {
-                  is_voltage_decrease = 1;
-            }
+            if (voltage_cnt >= VOLTAGE_CNT_NUM) is_voltage_decrease = 1;
+
             if (is_voltage_decrease == 1) {
                   motor.Free();
                   ui.putc('E');
@@ -122,8 +117,6 @@ int main() {
 
                   if (mode == 0) {
                         motor.Free();
-                        kicker_sig_1 = 0;
-                        kicker_sig_2 = 0;
                         dribblerFront.Stop();
                         dribblerBack.Stop();
                   } else if (mode == 1) {
@@ -137,18 +130,17 @@ int main() {
 
 void offence_move() {
       if (holdFront.IsHold()) {
-            if(y_goal_size < 30 || abs(y_goal_dir) > 30){
+            if (y_goal_size < 30 || abs(y_goal_dir) > 30) {
                   motor.Run(y_goal_dir * 1.5, 50);
                   dribblerFront.Hold(100);
-            }else{
+            } else {
                   motor.Run(0, 100);
                   dribblerFront.Kick();
-                  kicker_sig_1 = 1;
-                  kicker_sig_2 = 1;
+                  kicker.Kick();
                   wait_us(100000);
             }
       } else if (holdBack.IsHold()) {
-            if(y_goal_size > 35){
+            if (y_goal_size > 35) {
                   motor.Run(0, 70, y_goal_dir > 0 ? -90 : 90);
                   dribblerBack.Hold(100);
             } else {
@@ -156,8 +148,6 @@ void offence_move() {
                   dribblerBack.Hold(100);
             }
       } else {
-            kicker_sig_1 = 0;
-            kicker_sig_2 = 0;
             if ((abs(ball_dir) < 30 && ball_dis > 130) || holdFront.GetVal() < 150) {
                   dribblerFront.Hold(100);
             } else {
@@ -236,7 +226,8 @@ void imu_rx() {
 void ui_rx() {
       static int8_t item = 0;
 
-      uint8_t dribbler_sig = 0;
+      static uint8_t dribbler_sig = 0;
+      static uint8_t kicker_sig = 0;
 
       // データ受信
       if (ui.getc() == 0xFF) {   // ヘッダーがあることを確認
@@ -259,15 +250,7 @@ void ui_rx() {
       }
 
       if (mode == 0) {
-            /*
-            if (kicker_sig == 1) {
-                  kicker_sig_1 = 1;
-                  kicker_sig_2 = 1;
-                  wait_us(100000);
-            } else {
-                  kicker_sig_1 = 0;
-                  kicker_sig_2 = 0;
-            }
+            if (kicker_sig == 1) kicker.Kick();
 
             switch (dribbler_sig) {
                   case 0:
@@ -286,7 +269,7 @@ void ui_rx() {
                   case 4:
                         dribblerBack.Kick();
                         break;
-            }*/
+            }
 
             // データ送信
             uint8_t send_byte_num;
