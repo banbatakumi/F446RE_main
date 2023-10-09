@@ -30,3 +30,9 @@ void Dribbler::Stop() {
       motor_b = 0;
       motorAve.Reset();
 }
+
+void Dribbler::Brake() {
+      motor_a = 1;
+      motor_b = 1;
+      motorAve.Reset();
+}

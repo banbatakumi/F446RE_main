@@ -16,20 +16,20 @@
 #define IMU_UART_SPEED 57600
 #define UI_UART_SPEED 19200
 #define LIDAR_UART_SPEED 57600
-#define CAM_UART_SPEED 38400
+#define CAM_UART_SPEED 115200
 
 // UART通信定義 (TX, RX)
+RawSerial cam(PA_0, PA_1);
 RawSerial line(PA_2, PA_3);
 RawSerial imu(PA_9, PA_10);
 RawSerial ui(PC_10, PC_11);
 RawSerial lidar(PC_12, PD_2);
-RawSerial cam(PA_0, PA_1);
 
+void cam_rx();
 void line_rx();
 void imu_rx();
 void ui_rx();
 void lidar_rx();
-void cam_rx();
 
 void offence_move();
 void defence_move();
@@ -68,26 +68,28 @@ uint8_t b_goal_size;
 bool is_voltage_decrease = 0;
 uint16_t voltage_cnt;
 
+Timer curveShootTimer;
+
 int main() {
       // UART初期設定
+      cam.baud(CAM_UART_SPEED);
+      // cam.attach(&cam_rx);
       line.baud(LINE_UART_SPEED);
       // line.attach(&line_rx);
       imu.baud(IMU_UART_SPEED);
-      imu.attach(&imu_rx);
+      imu.attach(&imu_rx, Serial::RxIrq);
       ui.baud(UI_UART_SPEED);
-      ui.attach(&ui_rx);
+      ui.attach(&ui_rx, Serial::RxIrq);
       lidar.baud(LIDAR_UART_SPEED);
-      lidar.attach(&lidar_rx);
-      cam.baud(CAM_UART_SPEED);
-      // cam.attach(&cam_rx);
+      lidar.attach(&lidar_rx, Serial::RxIrq);
 
       motor.SetPwmPeriod(30000);
       dribblerFront.SetPwmPeriod(30000);
       dribblerBack.SetPwmPeriod(30000);
 
-      offencePID.SetGain(0.5, 0, 15);
+      offencePID.SetGain(0.5, 0, 25);
       offencePID.SetSamplingPeriod(0.01);
-      offencePID.SetLimit(70);
+      offencePID.SetLimit(75);
       offencePID.SelectType(PI_D_TYPE);
 
       kicker.SetKickTime(100);
@@ -117,8 +119,6 @@ int main() {
 
                   if (mode == 0) {
                         motor.Free();
-                        dribblerFront.Stop();
-                        dribblerBack.Stop();
                   } else if (mode == 1) {
                         offence_move();
                   } else if (mode == 2) {
@@ -129,64 +129,138 @@ int main() {
 }
 
 void offence_move() {
-      if (holdFront.IsHold()) {
-            if (y_goal_size < 30 || abs(y_goal_dir) > 30) {
-                  motor.Run(y_goal_dir * 1.5, 50);
-                  dribblerFront.Hold(100);
-            } else {
-                  motor.Run(0, 100);
-                  dribblerFront.Kick();
-                  kicker.Kick();
-                  wait_us(100000);
-            }
-      } else if (holdBack.IsHold()) {
-            if (y_goal_size > 35) {
-                  motor.Run(0, 70, y_goal_dir > 0 ? -90 : 90);
-                  dribblerBack.Hold(100);
-            } else {
-                  motor.Run(0, 30);
-                  dribblerBack.Hold(100);
-            }
+      if (ball_dis == 0) {
+            motor.Free();
       } else {
-            if ((abs(ball_dir) < 30 && ball_dis > 130) || holdFront.GetVal() < 150) {
-                  dribblerFront.Hold(100);
-            } else {
-                  dribblerFront.Stop();
-            }
-            if (abs(ball_dir) > 160 && ball_dis > 150) {
-                  dribblerBack.Hold(100);
-            } else {
-                  dribblerBack.Stop();
-            }
-            if (abs(ball_dir) < 160) {
-                  int16_t tmp_move_speed, tmp_move_angle, robot_angle = 0;
-
-                  int16_t addend;
-
-                  if (abs(ball_dir) < 60) {
-                        addend = ball_dir * 1.5;
+            if (curveShootTimer.read() > 0) {
+                  static int8_t shoot_dir;
+                  if (curveShootTimer.read() < 0.25) {
+                        motor.Run(0, 0);
+                        shoot_dir = y_goal_dir > 0 ? -1 : 1;
+                  } else if (curveShootTimer.read() < 0.5) {
+                        motor.Run(0, 50, 45 * shoot_dir, BACK, 25);
+                  } else if (curveShootTimer.read() < 1) {
+                        motor.Run(0, 50, 135 * shoot_dir, FRONT);
                   } else {
-                        addend = 90 * (abs(ball_dir) / ball_dir);
+                        curveShootTimer.stop();
+                        curveShootTimer.reset();
                   }
-                  tmp_move_angle = ball_dir + (addend * (ball_dis / 180.000));
-
-                  offencePID.Compute(ball_dir, 0);
-
-                  tmp_move_speed = abs(offencePID.Get()) + ((200 - ball_dis) / 3);
-                  //         +(180 - ball_dis);
-
-                  // 方向
-                  if (tmp_move_speed > 70) tmp_move_speed = 70;
-
-                  motor.Run(tmp_move_angle, tmp_move_speed, robot_angle);   // 回り込み
+                  if(curveShootTimer.read() < 0.5 && holdBack.IsHold() == 0){
+                        curveShootTimer.stop();
+                        curveShootTimer.reset();
+                  }
+            } else if (holdFront.IsHold()) {
+                  if (y_goal_size < 25 || abs(y_goal_dir) > 10) {
+                        motor.Run(y_goal_dir * 2, 50, (y_goal_dir / 2) + yaw, FRONT, 10);
+                        dribblerFront.Hold(100);
+                  } else {
+                        motor.Run(0, 100, y_goal_dir + yaw, FRONT, 10);
+                        dribblerFront.Kick();
+                        kicker.Kick();
+                  }
+            } else if (holdBack.IsHold()) {
+                  if (y_goal_size < 30 || abs(y_goal_dir) > 45) {
+                        motor.Run(y_goal_dir * 2, 50);
+                        dribblerBack.Hold(100);
+                  } else {
+                        curveShootTimer.start();
+                        dribblerBack.Hold(100);
+                  }
             } else {
-                  motor.Run(ball_dir - (180 - ball_dir), (180 - abs(ball_dir)) + 25);
+                  if ((abs(ball_dir) < 30 && ball_dis > 130) || holdFront.GetVal() < 150) {
+                        dribblerFront.Hold(50);
+                  } else {
+                        dribblerFront.Stop();
+                  }
+                  if (abs(ball_dir) > 160 && ball_dis > 150) {
+                        dribblerBack.Hold(50);
+                  } else {
+                        dribblerBack.Stop();
+                  }
+                  if (abs(ball_dir) < 135) {
+                        int16_t tmp_move_speed, tmp_move_angle, robot_angle = 0;
+
+                        int16_t addend;
+
+                        if (abs(ball_dir) < 60) {
+                              addend = ball_dir * 1.5;
+                        } else {
+                              addend = 90 * (abs(ball_dir) / ball_dir);
+                        }
+                        tmp_move_angle = ball_dir + (addend * (ball_dis / 180.000));
+
+                        offencePID.Compute(ball_dir, 0);
+
+                        tmp_move_speed = abs(offencePID.Get()) + ((220 - ball_dis) / 2);
+
+                        // 方向
+                        if (tmp_move_speed > 70) tmp_move_speed = 70;
+
+                        motor.Run(tmp_move_angle, tmp_move_speed, robot_angle);   // 回り込み
+                  } else {
+                        int16_t inverse_ball_dir = SimplifyDeg(ball_dir + 180);
+                        int16_t tmp_move_speed, tmp_move_angle;
+
+                        int16_t addend;
+
+                        if (abs(inverse_ball_dir) < 45) {
+                              addend = inverse_ball_dir * 2;
+                        } else {
+                              addend = 90 * (abs(inverse_ball_dir) / inverse_ball_dir);
+                        }
+                        tmp_move_angle = inverse_ball_dir + (addend * (ball_dis / 180.000));
+
+                        offencePID.Compute(inverse_ball_dir, 0);
+
+                        tmp_move_speed = abs(offencePID.Get()) + ((220 - ball_dis) / 2);
+
+                        // 方向
+                        if (tmp_move_speed > 50) tmp_move_speed = 50;
+
+                        tmp_move_angle = SimplifyDeg(tmp_move_angle - 180);
+                        motor.Run(tmp_move_angle, tmp_move_speed);
+                  }
             }
       }
 }
 
 void defence_move() {
       motor.Run();
+}
+
+void cam_rx() {
+      led_1 = 1;
+      if (cam.getc() == 0xFF) {   // ヘッダーがあることを確認
+            led_2 = 1;
+            const uint8_t recv_byte_num = 10;
+            uint8_t recv_byte[recv_byte_num];
+
+            uint8_t ball_dir_plus, ball_dir_minus;
+            uint8_t y_goal_dir_plus, y_goal_dir_minus;
+            uint8_t b_goal_dir_plus, b_goal_dir_minus;
+
+            for (int i = 0; i < recv_byte_num; i++) {
+                  recv_byte[i] = cam.getc();   // 一旦すべてのデータを格納する
+            }
+            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
+                  ball_dir_plus = recv_byte[0];
+                  ball_dir_minus = recv_byte[1];
+                  ball_dis = recv_byte[2];
+                  y_goal_dir_plus = recv_byte[3];
+                  y_goal_dir_minus = recv_byte[4];
+                  y_goal_size = recv_byte[5];
+                  b_goal_dir_plus = recv_byte[6];
+                  b_goal_dir_minus = recv_byte[7];
+                  b_goal_size = recv_byte[8];
+                  ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
+                  y_goal_dir = SimplifyDeg(y_goal_dir_plus == 0 ? y_goal_dir_minus * -1 : y_goal_dir_plus);
+                  b_goal_dir = SimplifyDeg(b_goal_dir_plus == 0 ? b_goal_dir_minus * -1 : b_goal_dir_plus);
+            }
+            led_2 = 0;
+      } else {
+            return;
+      }
+      led_1 = 0;
 }
 
 void line_rx() {
@@ -250,7 +324,10 @@ void ui_rx() {
       }
 
       if (mode == 0) {
-            if (kicker_sig == 1) kicker.Kick();
+            if (kicker_sig == 1) {
+                  kicker.Kick();
+                  wait_us(100000);
+            }
 
             switch (dribbler_sig) {
                   case 0:
@@ -279,17 +356,26 @@ void ui_rx() {
             if (item == 0) {
                   send_byte_num = 1;
                   send_byte[0] = uint8_t(voltage.Get() * 10);
+                  for (uint8_t i = 0; i < send_byte_num; i++) {
+                        ui.putc(send_byte[i]);
+                  }
             } else if (item == 1) {
                   send_byte_num = 3;
                   send_byte[1] = yaw > 0 ? yaw : 0;
                   send_byte[2] = yaw < 0 ? yaw * -1 : 0;
+                  for (uint8_t i = 0; i < send_byte_num; i++) {
+                        ui.putc(send_byte[i]);
+                  }
             } else if (item == 2) {
                   send_byte_num = 20;
                   send_byte[1] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
                   send_byte[2] = tof.SafeDir() < 0 ? tof.SafeDir() * -1 : 0;
                   send_byte[3] = tof.MinSensor();
                   for (uint8_t i = 0; i < 16; i++) {
-                        send_byte[i + 5] = tof.val[i];
+                        send_byte[i + 4] = tof.val[i];
+                  }
+                  for (uint8_t i = 0; i < send_byte_num; i++) {
+                        ui.putc(send_byte[i]);
                   }
             } else if (item == 3) {
                   send_byte_num = 6;
@@ -298,10 +384,9 @@ void ui_rx() {
                   send_byte[3] = ball_dis;
                   send_byte[4] = holdFront.IsHold();
                   send_byte[5] = holdBack.IsHold();
-            }
-
-            for (uint8_t i = 0; i < send_byte_num; i++) {
-                  ui.putc(send_byte[i]);
+                  for (uint8_t i = 0; i < send_byte_num; i++) {
+                        ui.putc(send_byte[i]);
+                  }
             }
       }
 }
@@ -318,37 +403,6 @@ void lidar_rx() {
                   for (uint8_t i = 0; i < 16; i++) {
                         tof.val[i] = recv_byte[i];
                   }
-            }
-      } else {
-            return;
-      }
-}
-
-void cam_rx() {
-      if (cam.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 10;
-            uint8_t recv_byte[recv_byte_num];
-
-            uint8_t ball_dir_plus, ball_dir_minus;
-            uint8_t y_goal_dir_plus, y_goal_dir_minus;
-            uint8_t b_goal_dir_plus, b_goal_dir_minus;
-
-            for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = cam.getc();   // 一旦すべてのデータを格納する
-            }
-            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // ヘッダーとフッターがあることを確認
-                  ball_dir_plus = recv_byte[0];
-                  ball_dir_minus = recv_byte[1];
-                  ball_dis = recv_byte[2];
-                  y_goal_dir_plus = recv_byte[3];
-                  y_goal_dir_minus = recv_byte[4];
-                  y_goal_size = recv_byte[5];
-                  b_goal_dir_plus = recv_byte[6];
-                  b_goal_dir_minus = recv_byte[7];
-                  b_goal_size = recv_byte[8];
-                  ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
-                  y_goal_dir = SimplifyDeg(y_goal_dir_plus == 0 ? y_goal_dir_minus * -1 : y_goal_dir_plus);
-                  b_goal_dir = SimplifyDeg(b_goal_dir_plus == 0 ? b_goal_dir_minus * -1 : b_goal_dir_plus);
             }
       } else {
             return;

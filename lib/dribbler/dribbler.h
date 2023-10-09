@@ -10,11 +10,12 @@ class Dribbler {
      public:
       Dribbler(PinName motor_a_, PinName motor_b_);
 
-      void SetPwmPeriod(uint16_t pwm_period_ = 30000);
+      void SetPwmPeriod(uint16_t pwm_period_);
 
       void Hold(uint8_t speed_ = 50);
       void Kick();
       void Stop();
+      void Brake();
 
      private:
       MovingAve motorAve;

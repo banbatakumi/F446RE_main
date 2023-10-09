@@ -15,6 +15,6 @@ void Kicker::Kick() {
       sig_1 = 1;
       sig_2 = 1;
       wait_us(kick_time);
-      sig_1 = 0;
+      sig_1 = 1;
       sig_2 = 0;
 }

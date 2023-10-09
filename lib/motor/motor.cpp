@@ -62,7 +62,7 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
             }
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] *= float(moving_speed_) / max_power;
+            power[i] *= float(moving_speed) / max_power;
       }
 
       // PID姿勢制御
@@ -91,11 +91,6 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
                         power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
                   }
             }
-
-            // モーターの上限値を超えた場合の修正
-            if (abs(power[i]) > POWER_LIMIT) {
-                  power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);
-            }
       }
 
       // 移動平均フィルタ
@@ -104,6 +99,11 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       motor3Ave.Compute(&power[2]);
       motor4Ave.Compute(&power[3]);
 
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
+            if (power[i] > POWER_LIMIT) {
+                  power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);
+            }
+      }
       // モーターへ出力
       motor_1_a = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);
       motor_1_b = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] < 0 ? power[0] * -0.01000 : 0);
