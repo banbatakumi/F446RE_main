@@ -17,7 +17,7 @@
 #define KD 0.050   // 姿制御微分ゲイン
 #define PID_SAMPLING_PERIOD 0.01
 
-#define MOVING_AVG_LENGTH 25   // 移動平均フィルタの回数
+#define MOVING_AVG_LENGTH 15   // 移動平均フィルタの回数
 
 #define MOTOR_QTY 4
 

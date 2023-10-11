@@ -15,7 +15,7 @@ class Kicker {
       DigitalOut sig_1;
       DigitalOut sig_2;
 
-      uint16_t kick_time;
+      uint32_t kick_time;
 };
 
 #endif
