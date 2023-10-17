@@ -8,11 +8,12 @@
 #define PI 3.1415926535   // 円周率
 
 #define TOF_QTY 16
-
 class Tof {
      public:
       Tof();
-      int16_t SafeDir();
+      int16_t FrontSafeDir(uint16_t dis_limit_ = 256);
+      int16_t SafeDir(uint16_t dis_limit_ = 256);
+      uint8_t FrontMinSensor();
       uint8_t MinSensor();
 
       uint8_t val[TOF_QTY];

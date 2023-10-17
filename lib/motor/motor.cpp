@@ -104,7 +104,16 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
                   power[i] = POWER_LIMIT * (abs(power[i]) / power[i]);
             }
       }
+
       // モーターへ出力
+      motor_1_a = 1;
+      motor_1_b = 1;
+      motor_2_a = 1;
+      motor_2_b = 1;
+      motor_3_a = 1;
+      motor_3_b = 1;
+      motor_4_a = 1;
+      motor_4_b = 1;
       motor_1_a = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);
       motor_1_b = abs(power[0]) < MIN_BRAKE ? 1 : (power[0] < 0 ? power[0] * -0.01000 : 0);
       motor_2_a = abs(power[1]) < MIN_BRAKE ? 1 : (power[1] > 0 ? power[1] * 0.01000 : 0);
