@@ -10,7 +10,7 @@
 #define PI 3.1415926535   // 円周率
 
 #define MIN_BRAKE 5   // モーターの最小値ブレーキ
-#define POWER_LIMIT 80   // モーターの最大パワー
+#define POWER_LIMIT 90   // モーターの最大パワー
 
 #define KP 1.500   // 姿勢制御比例ゲイン
 #define KI 0   // 姿制御積分ゲイン
