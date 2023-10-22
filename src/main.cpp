@@ -9,32 +9,33 @@
 #include "voltage.h"
 
 #define CUT_VOLTAGE 4.0   // 全機能強制終了する電圧
-#define VOLTAGE_CNT_NUM 1000   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
+#define VOLTAGE_CNT_NUM 1200   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define LINE_UART_SPEED 115200
-#define IMU_UART_SPEED 57600
-#define UI_UART_SPEED 19200
-#define LIDAR_UART_SPEED 57600
+#define IMU_UART_SPEED 115200
+#define UI_UART_SPEED 115200
+#define LIDAR_UART_SPEED 115200
 #define CAM_UART_SPEED 115200
 
 // UART通信定義 (TX, RX)
-RawSerial cam(PA_0, PA_1);
-RawSerial line(PA_2, PA_3);
-RawSerial imu(PA_9, PA_10);
-RawSerial ui(PC_10, PC_11);
-RawSerial lidar(PC_12, PD_2);
+RawSerial camSerial(PA_0, PA_1);
+RawSerial lineSerial(PA_2, PA_3);
+RawSerial imuSerial(PA_9, PA_10);
+RawSerial uiSerial(PC_10, PC_11);
+RawSerial lidarSerial(PC_12, PD_2);
 
-void cam_rx();
-void line_rx();
-void imu_rx();
-void ui_rx();
-void lidar_rx();
+void Cam();
+void Line();
+void Imu();
+void Ui();
+void Lidar();
 
-void offence_move();
-void defence_move();
+void OffenceMove();
+void DefenceMove();
 
-PID wrapPID;
+PID wrapDirPID;
+PID wrapDisPID;
 
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
@@ -45,17 +46,16 @@ Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
 Tof tof;
 
-DigitalOut led_1(PA_5);
-DigitalOut led_2(PA_6);
+DigitalOut led[2] = {PA_5, PA_6};
 
 // グローバル変数定義
 int16_t yaw = 0;
 bool is_yaw_correction = 0;
 uint8_t tof_val[16];
-uint8_t encoder_val_avg;
+uint8_t encoder_val[4];
 uint8_t mode = 0;
 uint8_t moving_speed;
-uint8_t line_moving_speed = 80;
+uint8_t line_moving_speed;
 uint8_t is_line_left;
 uint8_t is_line_right;
 uint8_t line_white_num;
@@ -72,7 +72,6 @@ bool is_y_goal_front;
 int16_t front_goal_dir;
 uint8_t front_goal_size;
 int16_t back_goal_dir;
-
 uint8_t back_goal_size;
 
 bool is_voltage_decrease = 0;
@@ -82,30 +81,41 @@ Timer curveShootTimer;
 
 void setup() {
       // UART初期設定
-      cam.baud(CAM_UART_SPEED);
-      // cam.attach(&cam_rx);
-      line.baud(LINE_UART_SPEED);
-      // line.attach(&line_rx);
-      imu.baud(IMU_UART_SPEED);
-      imu.attach(&imu_rx, Serial::RxIrq);
-      ui.baud(UI_UART_SPEED);
-      ui.attach(&ui_rx, Serial::RxIrq);
-      lidar.baud(LIDAR_UART_SPEED);
-      lidar.attach(&lidar_rx, Serial::RxIrq);
+      camSerial.baud(CAM_UART_SPEED);
+      // camSerial.attach(&Cam);
+      lineSerial.baud(LINE_UART_SPEED);
+      // lineSerial.attach(&Line);
+      imuSerial.baud(IMU_UART_SPEED);
+      imuSerial.attach(&Imu, Serial::RxIrq);
+      uiSerial.baud(UI_UART_SPEED);
+      uiSerial.attach(&Ui, Serial::RxIrq);
+      lidarSerial.baud(LIDAR_UART_SPEED);
+      lidarSerial.attach(&Lidar, Serial::RxIrq);
 
-      // PWM周波数の設定
-      // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
-      motor.SetPwmPeriod(10);
-      dribblerFront.SetPwmPeriod(10);
-      dribblerBack.SetPwmPeriod(10);
+      // モーター
+      motor.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      motor.SetAttitudeControlPID(1.5, 0, 0.075);   // デフォルトゲイン：(1.5, 0, 0.075)
+      motor.SetMovingAveLength(25);
+      motor.SetPowerMaxLimit(80);
+      motor.SetPowerMinLimit(5);
 
-      // 回り込みPIDの初期設定
-      wrapPID.SetGain(0.75, 0, 10);
-      wrapPID.SetSamplingPeriod(0.01);
-      wrapPID.SetLimit(100);
-      wrapPID.SelectType(PI_D_TYPE);
+      // ドリブラー
+      dribblerFront.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      dribblerBack.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
 
-      kicker.SetKickTime(100);
+      // 回り込みPID
+      wrapDirPID.SetGain(0.5, 0, 25);
+      wrapDirPID.SetSamplingPeriod(0.01);
+      wrapDirPID.SetLimit(100);
+      wrapDirPID.SelectType(PI_D_TYPE);
+
+      wrapDisPID.SetGain(0.5, 0, 25);
+      wrapDisPID.SetSamplingPeriod(0.01);
+      wrapDisPID.SetLimit(50);
+      wrapDisPID.SelectType(PI_D_TYPE);
+
+      // キッカー
+      kicker.SetPower(75);   // 100まで
 }
 
 int main() {
@@ -125,12 +135,16 @@ int main() {
                   motor.Free();
             } else {
                   motor.yaw = yaw;
-                  motor.encoder_val = encoder_val_avg;
+                  motor.encoder_val[0] = encoder_val[0];
+                  motor.encoder_val[1] = encoder_val[1];
+                  motor.encoder_val[2] = encoder_val[2];
+                  motor.encoder_val[3] = encoder_val[3];
                   holdFront.Read();
                   holdBack.Read();
 
-                  if (line.readable() == 1) line_rx();
-                  if (cam.readable() == 1) cam_rx();
+                  // 送信
+                  if (lineSerial.readable() == 1) Line();
+                  if (camSerial.readable() == 1) Cam();
 
                   if (mode == 0) {
                         motor.Free();
@@ -142,16 +156,20 @@ int main() {
                         } else if (is_line_right == 1) {
                               motor.Run(-90, line_moving_speed);
                         } else {
-                              offence_move();
+                              OffenceMove();
                         }
                   } else if (mode == 2) {
-                        defence_move();
+                        DefenceMove();
+                  } else if (mode == 3) {
+                        motor.Free();
+                  } else if (mode == 4) {
+                        motor.Run();
                   }
             }
       }
 }
 
-void offence_move() {
+void OffenceMove() {
       if (ball_dis == 0) {   // ボールがない時の処理
             if (tof.val[tof.MinSensor()] < 100) {
                   motor.Run(tof.SafeDir(), 50);   // 中央に戻る
@@ -234,17 +252,18 @@ void offence_move() {
                         } else {
                               wrap_deg_addend = 90 * (abs(ball_dir) / ball_dir);
                         }
-                        tmp_move_angle = ball_dir + (wrap_deg_addend * (ball_dis / 180.000));
+                        tmp_move_angle = ball_dir + (wrap_deg_addend * (ball_dis / 175.000));
 
                         // 速度
-                        wrapPID.Compute(ball_dir, 0);
+                        wrapDirPID.Compute(ball_dir, 0);
+                        wrapDisPID.Compute(ball_dis, 200);
 
-                        wrap_speed_addend = (25 - abs(ball_dir));
-                        if (abs(ball_dir) > 25) wrap_speed_addend = 0;
+                        //wrap_speed_addend = (20 - abs(ball_dir));
+                        //if (abs(ball_dir) > 20) wrap_speed_addend = 0;
+                        tmp_move_speed = abs(wrapDirPID.Get()) + abs(wrapDisPID.Get());
+            //            +wrap_speed_addend;
 
-                        tmp_move_speed = abs(wrapPID.Get()) + wrap_speed_addend + ((200 - ball_dis) / 2);
-
-                        if (tmp_move_speed > 80) tmp_move_speed = 80;
+                        if (tmp_move_speed > 75) tmp_move_speed = 75;
 
                         motor.Run(tmp_move_angle, tmp_move_speed);
                   } else {   // 後ろの捕捉エリアに回り込む
@@ -260,15 +279,15 @@ void offence_move() {
                         } else {
                               wrap_deg_addend = 90 * (abs(inverse_ball_dir) / inverse_ball_dir);
                         }
-                        tmp_move_angle = inverse_ball_dir + (wrap_deg_addend * (ball_dis / 180.000));
+                        tmp_move_angle = inverse_ball_dir + (wrap_deg_addend * (ball_dis / 175.000));
 
                         // 速度
-                        wrapPID.Compute(inverse_ball_dir, 0);
+                        wrapDirPID.Compute(inverse_ball_dir, 0);
 
-                        wrap_speed_addend = (25 - abs(inverse_ball_dir));
-                        if (abs(inverse_ball_dir) > 25) wrap_speed_addend = 0;
+                        wrap_speed_addend = (20 - abs(inverse_ball_dir));
+                        if (abs(inverse_ball_dir) > 20) wrap_speed_addend = 0;
 
-                        tmp_move_speed = abs(wrapPID.Get()) + wrap_speed_addend + ((200 - ball_dis) / 2);
+                        tmp_move_speed = abs(wrapDirPID.Get()) + wrap_speed_addend + ((200 - ball_dis) / 2.5);
 
                         if (tmp_move_speed > 60) tmp_move_speed = 60;
 
@@ -279,7 +298,7 @@ void offence_move() {
       }
 }
 
-void defence_move() {
+void DefenceMove() {
       /*
       if(is_line_right){
             motor.Run(-90,90);
@@ -289,17 +308,18 @@ void defence_move() {
       if (line_white_num == 0) {
             motor.Free();
       } else {
-            motor.Run(SimplifyDeg(line_vector - 180), 75);
+            motor.Run(SimplifyDeg(line_vector - 180), line_moving_speed);
       }
+      // motor.Run();
 }
 
-void cam_rx() {
-      if (cam.getc() == 0xFF) {   // ヘッダーがあることを確認
+void Cam() {
+      if (camSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
             const uint8_t recv_byte_num = 10;
             uint8_t recv_byte[recv_byte_num];
 
             for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = cam.getc();   // 一旦すべてのデータを格納する
+                  recv_byte[i] = camSerial.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
                   uint8_t ball_dir_plus, ball_dir_minus;
@@ -336,25 +356,32 @@ void cam_rx() {
       } else {
             return;
       }
+
+      // 送信
+      camSerial.putc(mode);
 }
 
-void line_rx() {
-      if (line.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 7;
+void Line() {
+      // 受信
+      if (lineSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 10;
             uint8_t recv_byte[recv_byte_num];
 
             for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = line.getc();   // 一旦すべてのデータを格納する
+                  recv_byte[i] = lineSerial.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
                   uint8_t line_vector_plus, line_vector_minus;
 
-                  encoder_val_avg = recv_byte[0];
-                  line_white_num = recv_byte[1];
-                  is_line_left = recv_byte[2];
-                  is_line_right = recv_byte[3];
-                  line_vector_plus = recv_byte[4];
-                  line_vector_minus = recv_byte[5];
+                  encoder_val[0] = recv_byte[0];
+                  encoder_val[1] = recv_byte[1];
+                  encoder_val[2] = recv_byte[2];
+                  encoder_val[3] = recv_byte[3];
+                  line_white_num = recv_byte[4];
+                  is_line_left = recv_byte[5];
+                  is_line_right = recv_byte[6];
+                  line_vector_plus = recv_byte[7];
+                  line_vector_minus = recv_byte[8];
                   line_vector = SimplifyDeg(line_vector_plus == 0 ? line_vector_minus * -1 : line_vector_plus);
             } else {
                   return;
@@ -362,12 +389,15 @@ void line_rx() {
       } else {
             return;
       }
+
+      // 送信
+      lineSerial.putc(mode);
 }
 
-void imu_rx() {
-      if (imu.getc() == 0xFF) {   // ヘッダーがあることを確認
-            uint8_t yaw_plus = imu.getc();
-            uint8_t yaw_minus = imu.getc();
+void Imu() {
+      if (imuSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
+            uint8_t yaw_plus = imuSerial.getc();
+            uint8_t yaw_minus = imuSerial.getc();
 
             static int16_t yaw_correction = 0;
 
@@ -380,26 +410,27 @@ void imu_rx() {
       }
 }
 
-void ui_rx() {
+void Ui() {
       static int8_t item = 0;
 
       static uint8_t dribbler_sig = 0;
 
-      // データ受信
-      if (ui.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 7;
+      // 受信
+      if (uiSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
+            const uint8_t recv_byte_num = 8;
             uint8_t recv_byte[recv_byte_num];
 
             for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = ui.getc();   // 一旦すべてのデータを格納する
+                  recv_byte[i] = uiSerial.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
                   item = recv_byte[0] - 100;
                   mode = recv_byte[1];
                   is_yaw_correction = recv_byte[2];
                   moving_speed = recv_byte[3];
-                  dribbler_sig = recv_byte[4];
-                  is_y_goal_front = recv_byte[5];
+                  line_moving_speed = recv_byte[4];
+                  dribbler_sig = recv_byte[5];
+                  is_y_goal_front = recv_byte[6];
             } else {
                   return;
             }
@@ -414,35 +445,35 @@ void ui_rx() {
                         dribblerBack.Stop();
                         break;
                   case 1:
-                        dribblerFront.Hold(90);
+                        dribblerFront.Hold(95);
                         break;
                   case 2:
-                        dribblerFront.Kick();
+                        dribblerFront.Stop();
                         kicker.Kick();
                         break;
                   case 3:
-                        dribblerBack.Hold(90);
+                        dribblerBack.Hold(95);
                         break;
                   case 4:
-                        dribblerBack.Kick();
+                        dribblerBack.Stop();
                         break;
             }
       }
 
-      // データ送信
+      // 送信
       if (is_voltage_decrease == 1) {
-            ui.putc('E');
-            ui.putc('R');
+            uiSerial.putc('E');
+            uiSerial.putc('R');
       } else {
             uint8_t send_byte_num;
             uint8_t send_byte[25];
             send_byte[0] = 0xFF;
 
             if (item == 0) {
-                  int16_t debug_val_1 = encoder_val_avg;
-                  int16_t debug_val_2 = line_vector;
-                  int16_t debug_val_3 = SimplifyDeg(tof.FrontMinSensor() * 22.5 + 90 * (tof.FrontSafeDir() > 0 ? 1 : -1));
-                  int16_t debug_val_4 = 0;
+                  int16_t debug_val_1 = encoder_val[0];
+                  int16_t debug_val_2 = encoder_val[1];
+                  int16_t debug_val_3 = encoder_val[2];
+                  int16_t debug_val_4 = encoder_val[3];
 
                   send_byte_num = 9;
                   send_byte[0] = uint8_t(voltage.Get() * 10);
@@ -455,14 +486,14 @@ void ui_rx() {
                   send_byte[7] = debug_val_4 > 0 ? debug_val_4 : 0;
                   send_byte[8] = debug_val_4 < 0 ? debug_val_4 * -1 : 0;
                   for (uint8_t i = 0; i < send_byte_num; i++) {
-                        ui.putc(send_byte[i]);
+                        uiSerial.putc(send_byte[i]);
                   }
             } else if (item == 1) {
                   send_byte_num = 3;
                   send_byte[1] = yaw > 0 ? yaw : 0;
                   send_byte[2] = yaw < 0 ? yaw * -1 : 0;
                   for (uint8_t i = 0; i < send_byte_num; i++) {
-                        ui.putc(send_byte[i]);
+                        uiSerial.putc(send_byte[i]);
                   }
             } else if (item == 2) {
                   send_byte_num = 20;
@@ -473,7 +504,7 @@ void ui_rx() {
                         send_byte[i + 4] = tof.val[i];
                   }
                   for (uint8_t i = 0; i < send_byte_num; i++) {
-                        ui.putc(send_byte[i]);
+                        uiSerial.putc(send_byte[i]);
                   }
             } else if (item == 3) {
                   send_byte_num = 6;
@@ -483,7 +514,7 @@ void ui_rx() {
                   send_byte[4] = holdFront.IsHold();
                   send_byte[5] = holdBack.IsHold();
                   for (uint8_t i = 0; i < send_byte_num; i++) {
-                        ui.putc(send_byte[i]);
+                        uiSerial.putc(send_byte[i]);
                   }
             } else if (item == 4) {
                   send_byte_num = 7;
@@ -494,19 +525,19 @@ void ui_rx() {
                   send_byte[5] = b_goal_dir < 0 ? b_goal_dir * -1 : 0;
                   send_byte[6] = b_goal_size;
                   for (uint8_t i = 0; i < send_byte_num; i++) {
-                        ui.putc(send_byte[i]);
+                        uiSerial.putc(send_byte[i]);
                   }
             }
       }
 }
 
-void lidar_rx() {
-      if (lidar.getc() == 0xFF) {   // ヘッダーがあることを確認
+void Lidar() {
+      if (lidarSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
             const uint8_t recv_byte_num = 17;
             uint8_t recv_byte[recv_byte_num];
 
             for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = lidar.getc();   // 一旦すべてのデータを格納する
+                  recv_byte[i] = lidarSerial.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
                   for (uint8_t i = 0; i < 16; i++) {

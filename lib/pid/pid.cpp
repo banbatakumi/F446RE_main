@@ -31,6 +31,7 @@ void PID::Compute(float input_, float target_) {
                   p = SimplifyDeg(target_ - input_);   // 比例
                   d = (p - pre_p) / sampling_timer.read();   // 微分
                   i += (p + pre_p) * sampling_timer.read();   // 積分
+                  if (i > limit) i = limit * (i / abs(i));
                   pre_p = p;
 
                   pid = p * kp + i * ki + d * kd;
@@ -38,6 +39,7 @@ void PID::Compute(float input_, float target_) {
                   p = SimplifyDeg(target_ - input_);   // 比例
                   d = (input_ - pre_input) / sampling_timer.read();   // 微分
                   i += (p + pre_p) / 2 * sampling_timer.read();   // 積分
+                  if (i > limit) i = limit * (i / abs(i));
                   pre_p = p;
                   pre_input = input_;
 

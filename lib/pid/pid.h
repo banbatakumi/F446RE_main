@@ -12,8 +12,8 @@ class PID {
 #define PI_D_TYPE 1
 
       void SetGain(float kp_, float ki_, float kd_);
-      void SetSamplingPeriod(float sampling_period_);
-      void SetLimit(float limit_);
+      void SetSamplingPeriod(float sampling_period_ = 0.01);
+      void SetLimit(float limit_ = 100);
       void SelectType(uint8_t type_ = PID_TYPE);
 
       void Compute(float input_, float target_);

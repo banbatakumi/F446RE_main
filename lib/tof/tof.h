@@ -1,7 +1,6 @@
 #ifndef MBED_TOF_H
 #define MBED_TOF_H
 
-#include "approximate_atan2.h"
 #include "mbed.h"
 #include "sin_cos_table.h"
 
