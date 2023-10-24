@@ -37,7 +37,7 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       }
 
       // PID姿勢制御
-      attitudeControlPID.Compute(yaw, robot_angle_);
+      attitudeControlPID.Compute(own_dir, robot_angle_);
       attitudeControlPID.SetLimit(pid_limit_);
       float tmp_pid = attitudeControlPID.Get();
 
@@ -67,11 +67,11 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       static uint8_t add_power[MOTOR_QTY];
       if (addPowerTimer.read() > 0.01) {
             for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-                  if (power[i] > 10) {
-                        if (encoder_val[i] < power[i] / 10) {
-                              if (add_power[i] < 75) add_power[i] += abs(encoder_val[i] - power[i] / 10);
+                  if (abs(power[i]) > 10) {
+                        if (encoder_val[i] < abs(power[i]) / 8) {
+                              if (add_power[i] < 75) add_power[i] += 1;
                         } else {
-                              if (add_power[i] > abs(encoder_val[i] - power[i] / 10)) add_power[i] -= abs(encoder_val[i] - power[i] / 10);
+                              if (add_power[i] > 1) add_power[i] -= 1;
                         }
                   } else {
                         add_power[i] = 0;
@@ -80,7 +80,11 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
             addPowerTimer.reset();
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] += add_power[i];
+            if(power[i] > 0){
+                  power[i] += add_power[i];
+            }else{
+                  power[i] -= add_power[i];
+            }
       }
 
       // 移動平均フィルタ

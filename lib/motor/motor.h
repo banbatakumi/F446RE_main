@@ -27,7 +27,7 @@ class Motor {
 #define BACK 3
 #define LEFT 4
 
-      int16_t yaw;
+      int16_t own_dir;
       uint8_t encoder_val[MOTOR_QTY];
 
      private:
