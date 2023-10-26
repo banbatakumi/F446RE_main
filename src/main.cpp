@@ -1,11 +1,13 @@
+#include "cam.h"
 #include "dribbler.h"
 #include "hold.h"
+#include "imu.h"
 #include "kicker.h"
+#include "lidar.h"
 #include "mbed.h"
 #include "motor.h"
 #include "pid.h"
 #include "simplify_deg.h"
-#include "tof.h"
 #include "voltage.h"
 
 #define PI 3.1415926535   // 円周率
@@ -17,41 +19,8 @@
 #define LINE_UART_SPEED 115200
 #define IMU_UART_SPEED 115200
 #define UI_UART_SPEED 115200
-#define LIDAR_UART_SPEED 115200
-#define CAM_UART_SPEED 115200
-
-// UART通信定義 (TX, RX)
-RawSerial camSerial(PA_0, PA_1);
-RawSerial lineSerial(PA_2, PA_3);
-RawSerial imuSerial(PA_9, PA_10);
-RawSerial uiSerial(PC_10, PC_11);
-RawSerial lidarSerial(PC_12, PD_2);
-
-void Cam();
-void Line();
-void Imu();
-void Ui();
-void Lidar();
-
-void OffenceMove();
-void DefenceMove();
-
-PID wrapDirPID;
-PID wrapDisPID;
-
-Voltage voltage(PA_4);
-Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8);
-Dribbler dribblerFront(PB_6, PB_7);
-Dribbler dribblerBack(PB_8, PB_9);
-Hold holdFront(PC_4);
-Hold holdBack(PC_5);
-Kicker kicker(PC_0, PC_1);
-Tof tof;
-
-DigitalOut led[2] = {PA_5, PA_6};
 
 // グローバル変数定義
-uint8_t tof_val[16];
 uint8_t encoder_val[4];
 uint8_t mode = 0;
 uint8_t moving_speed;
@@ -86,20 +55,40 @@ bool is_own_dir_correction = 0;
 bool is_voltage_decrease = 0;
 uint16_t voltage_cnt;
 
+// UART通信定義 (TX, RX)
+RawSerial lineSerial(PA_2, PA_3);
+RawSerial uiSerial(PC_10, PC_11);
+
+void Line();
+void Ui();
+
+void OffenceMove();
+void DefenceMove();
+
+PID wrapDirPID;
+PID wrapDisPID;
+
+Voltage voltage(PA_4);
+Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8, &own_dir);
+Dribbler dribblerFront(PB_6, PB_7);
+Dribbler dribblerBack(PB_8, PB_9);
+Hold holdFront(PC_4);
+Hold holdBack(PC_5);
+Kicker kicker(PC_0, PC_1);
+Lidar lidar(PC_12, PD_2);   // TX, RX
+Cam cam(PA_0, PA_1, &own_dir, &mode);
+Imu imu(PA_9, PA_10);
+
+DigitalOut led[2] = {PA_5, PA_6};
+
 Timer curveShootTimer;
 
 void setup() {
       // UART初期設定
-      camSerial.baud(CAM_UART_SPEED);
-      // camSerial.attach(&Cam);
       lineSerial.baud(LINE_UART_SPEED);
-      // lineSerial.attach(&Line);
-      imuSerial.baud(IMU_UART_SPEED);
-      imuSerial.attach(&Imu, Serial::RxIrq);
+      lineSerial.attach(&Line, Serial::RxIrq);
       uiSerial.baud(UI_UART_SPEED);
       uiSerial.attach(&Ui, Serial::RxIrq);
-      lidarSerial.baud(LIDAR_UART_SPEED);
-      lidarSerial.attach(&Lidar, Serial::RxIrq);
 
       // モーター
       motor.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
@@ -113,12 +102,12 @@ void setup() {
       dribblerBack.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
 
       // 回り込みPID
-      wrapDirPID.SetGain(1, 0, 25);
+      wrapDirPID.SetGain(0.5, 0, 10);
       wrapDirPID.SetSamplingPeriod(0.01);
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PI_D_TYPE);
 
-      wrapDisPID.SetGain(1, 0, 50);
+      wrapDisPID.SetGain(1, 0, 10);
       wrapDisPID.SetSamplingPeriod(0.01);
       wrapDisPID.SetLimit(50);
       wrapDisPID.SelectType(PI_D_TYPE);
@@ -143,7 +132,6 @@ int main() {
             if (is_voltage_decrease == 1) {
                   motor.Free();
             } else {
-                  motor.own_dir = own_dir;
                   motor.encoder_val[0] = encoder_val[0];
                   motor.encoder_val[1] = encoder_val[1];
                   motor.encoder_val[2] = encoder_val[2];
@@ -151,8 +139,20 @@ int main() {
                   holdFront.Read();
                   holdBack.Read();
 
-                  if (lineSerial.readable() == 1) Line();
-                  if (camSerial.readable() == 1) Cam();
+                  own_dir = imu.GetDir();
+
+                  ball_dir = cam.GetBallDir();
+                  ball_dis = cam.GetBallDis();
+                  y_goal_dir = cam.GetGoalDir(YELLOW);
+                  y_goal_size = cam.GetGoalSize(YELLOW);
+                  b_goal_dir = cam.GetGoalDir(BLUE);
+                  b_goal_size = cam.GetGoalSize(BLUE);
+                  front_goal_dir = cam.GetGoalDir(FRONT);
+                  front_goal_size = cam.GetGoalSize(FRONT);
+                  back_goal_dir = cam.GetGoalDir(BACK);
+                  back_goal_size = cam.GetGoalSize(BACK);
+
+                  // if (lineSerial.readable() == 1) Line();
 
                   if (mode == 0) {
                         motor.Free();
@@ -171,7 +171,7 @@ int main() {
                   } else if (mode == 3) {
                         motor.Free();
                   } else if (mode == 4) {
-                        motor.Run(0, 50);
+                        motor.Run();
                   }
             }
       }
@@ -179,8 +179,8 @@ int main() {
 
 void OffenceMove() {
       if (ball_dis == 0) {   // ボールがない時の処理
-            if (tof.val[tof.MinSensor()] < 150) {
-                  motor.Run(tof.SafeDir(), 50);   // 中央に戻る
+            if (lidar.val[lidar.MinSensor()] < 150) {
+                  motor.Run(lidar.SafeDir(), 50);   // 中央に戻る
             } else {
                   motor.Free();
             }
@@ -211,8 +211,8 @@ void OffenceMove() {
                         kicker.Kick();
                   } else {
                         dribblerFront.Hold(90);
-                        if (tof.val[tof.FrontMinSensor()] < 50 && (abs(front_goal_dir) < 30 || front_goal_size == 0)) {
-                              motor.Run(SimplifyDeg(tof.FrontMinSensor() * 22.5 + 90 * (tof.FrontSafeDir(50) > 0 ? 1 : -1)), 60);
+                        if (lidar.val[lidar.FrontMinSensor()] < 50 && (abs(front_goal_dir) < 30 || front_goal_size == 0)) {
+                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir(50) > 0 ? 1 : -1)), 60);
                         } else {
                               motor.Run(front_goal_dir * 2, 75);
                         }
@@ -223,8 +223,8 @@ void OffenceMove() {
                   } else {
                         dribblerBack.Hold(90);
 
-                        if (tof.val[tof.FrontMinSensor()] < 50 && (abs(front_goal_dir) < 30 || front_goal_size == 0)) {
-                              motor.Run(SimplifyDeg(tof.FrontMinSensor() * 22.5 + 90 * (tof.FrontSafeDir() > 0 ? 1 : -1)), 60);
+                        if (lidar.val[lidar.FrontMinSensor()] < 50 && (abs(front_goal_dir) < 30 || front_goal_size == 0)) {
+                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir() > 0 ? 1 : -1)), 60);
                         } else {
                               motor.Run(front_goal_dir * 2, 75);
                         }
@@ -252,14 +252,14 @@ void OffenceMove() {
                         } else {
                               wrap_deg_addend = 90 * (abs(ball_dir) / ball_dir);
                         }
-                        tmp_move_angle = ball_dir + (wrap_deg_addend * (ball_dis / 150.000));
+                        tmp_move_angle = ball_dir + (wrap_deg_addend * (ball_dis / 175.000));
 
                         // 速度
                         wrapDirPID.Compute(ball_dir, 0);
                         wrapDisPID.Compute(ball_dis, 175);
 
-                        wrap_speed_addend = (10 - abs(ball_dir));
-                        if (abs(ball_dir) > 10) wrap_speed_addend = 0;
+                        wrap_speed_addend = (15 - abs(ball_dir));
+                        if (abs(ball_dir) > 15) wrap_speed_addend = 0;
                         tmp_move_speed = abs(wrapDirPID.Get()) + abs(wrapDisPID.Get()) + wrap_speed_addend;
 
                         if (tmp_move_speed > 75) tmp_move_speed = 75;
@@ -278,7 +278,7 @@ void OffenceMove() {
                         } else {
                               wrap_deg_addend = 90 * (abs(inverse_ball_dir) / inverse_ball_dir);
                         }
-                        tmp_move_angle = inverse_ball_dir + (wrap_deg_addend * (ball_dis / 150.000));
+                        tmp_move_angle = inverse_ball_dir + (wrap_deg_addend * (ball_dis / 175.000));
 
                         // 速度
                         wrapDirPID.Compute(ball_dir, 0);
@@ -312,66 +312,15 @@ void DefenceMove() {
       // motor.Run();
 }
 
-void Cam() {
-      if (camSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 10;
-            uint8_t recv_byte[recv_byte_num];
-
-            for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = camSerial.getc();   // 一旦すべてのデータを格納する
-            }
-            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
-                  uint8_t ball_dir_plus, ball_dir_minus;
-                  uint8_t y_goal_dir_plus, y_goal_dir_minus;
-                  uint8_t b_goal_dir_plus, b_goal_dir_minus;
-
-                  ball_dir_plus = recv_byte[0];
-                  ball_dir_minus = recv_byte[1];
-                  ball_dis = recv_byte[2];
-                  y_goal_dir_plus = recv_byte[3];
-                  y_goal_dir_minus = recv_byte[4];
-                  y_goal_size = recv_byte[5];
-                  b_goal_dir_plus = recv_byte[6];
-                  b_goal_dir_minus = recv_byte[7];
-                  b_goal_size = recv_byte[8];
-
-                  ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
-                  y_goal_dir = SimplifyDeg(y_goal_dir_plus == 0 ? y_goal_dir_minus * -1 : y_goal_dir_plus);
-                  b_goal_dir = SimplifyDeg(b_goal_dir_plus == 0 ? b_goal_dir_minus * -1 : b_goal_dir_plus);
-                  if (ball_dis == 0) ball_dir = 0;
-                  if (y_goal_size == 0) y_goal_dir = 0;
-                  if (b_goal_size == 0) b_goal_dir = 0;
-
-                  if (is_y_goal_front == 1) {
-                        front_goal_dir = y_goal_dir;
-                        front_goal_size = y_goal_size;
-                        back_goal_dir = b_goal_dir;
-                        back_goal_size = b_goal_size;
-                  } else {
-                        front_goal_dir = b_goal_dir;
-                        front_goal_size = b_goal_size;
-                        back_goal_dir = y_goal_dir;
-                        back_goal_size = y_goal_size;
-                  }
-            } else {
-                  return;
-            }
-      } else {
-            return;
-      }
-
-      // 送信
-      camSerial.putc(mode);
-}
-
 void Line() {
+      /*
       // 受信
       if (lineSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
             const uint8_t recv_byte_num = 10;
             uint8_t recv_byte[recv_byte_num];
 
             for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = lineSerial.getc();   // 一旦すべてのデータを格納する
+                  //recv_byte[i] = lineSerial.getc();   // 一旦すべてのデータを格納する
             }
             if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
                   uint8_t line_vector_plus, line_vector_minus;
@@ -391,25 +340,49 @@ void Line() {
             }
       } else {
             return;
-      }
+      }*/
 
-      // 送信
-      lineSerial.putc(mode);
-}
+      static uint8_t data_length;
+      static uint8_t line_vector_plus, line_vector_minus;
 
-void Imu() {
-      if (imuSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
-            uint8_t own_dir_plus = imuSerial.getc();
-            uint8_t own_dir_minus = imuSerial.getc();
-
-            static int16_t own_dir_correction = 0;
-
-            if (is_own_dir_correction == 1) {
-                  own_dir_correction += own_dir;
+      if (data_length == 0) {
+            uint8_t head = lineSerial.getc();
+            if (head == 0xFF) {
+                  data_length += 1;
+            } else {
+                  data_length = 0;
             }
-            own_dir = SimplifyDeg((own_dir_plus == 0 ? own_dir_minus * -1 : own_dir_plus) - own_dir_correction);
-      } else {
-            return;
+      } else if (data_length == 1) {
+            encoder_val[0] = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 2) {
+            encoder_val[1] = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 3) {
+            encoder_val[2] = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 4) {
+            encoder_val[3] = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 5) {
+            line_white_num = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 6) {
+            is_line_left = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 7) {
+            is_line_right = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 8) {
+            line_vector_plus = lineSerial.getc();
+            data_length += 1;
+      } else if (data_length == 9) {
+            line_vector_minus = lineSerial.getc();
+            line_vector = SimplifyDeg(line_vector_plus == 0 ? line_vector_minus * -1 : line_vector_plus);
+           
+            // 送信
+            lineSerial.putc(mode);
+            data_length = 0;
       }
 }
 
@@ -500,11 +473,11 @@ void Ui() {
                   }
             } else if (item == 2) {
                   send_byte_num = 20;
-                  send_byte[1] = tof.SafeDir() > 0 ? tof.SafeDir() : 0;
-                  send_byte[2] = tof.SafeDir() < 0 ? tof.SafeDir() * -1 : 0;
-                  send_byte[3] = tof.MinSensor();
+                  send_byte[1] = lidar.SafeDir() > 0 ? lidar.SafeDir() : 0;
+                  send_byte[2] = lidar.SafeDir() < 0 ? lidar.SafeDir() * -1 : 0;
+                  send_byte[3] = lidar.MinSensor();
                   for (uint8_t i = 0; i < 16; i++) {
-                        send_byte[i + 4] = tof.val[i];
+                        send_byte[i + 4] = lidar.val[i];
                   }
                   for (uint8_t i = 0; i < send_byte_num; i++) {
                         uiSerial.putc(send_byte[i]);
@@ -531,25 +504,5 @@ void Ui() {
                         uiSerial.putc(send_byte[i]);
                   }
             }
-      }
-}
-
-void Lidar() {
-      if (lidarSerial.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 17;
-            uint8_t recv_byte[recv_byte_num];
-
-            for (int i = 0; i < recv_byte_num; i++) {
-                  recv_byte[i] = lidarSerial.getc();   // 一旦すべてのデータを格納する
-            }
-            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
-                  for (uint8_t i = 0; i < 16; i++) {
-                        tof.val[i] = recv_byte[i];
-                  }
-            } else {
-                  return;
-            }
-      } else {
-            return;
       }
 }

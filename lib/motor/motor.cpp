@@ -2,7 +2,7 @@
 
 #include "mbed.h"
 
-Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_) : motor_1_a(motor_1_a_), motor_1_b(motor_1_b_), motor_2_a(motor_2_a_), motor_2_b(motor_2_b_), motor_3_a(motor_3_a_), motor_3_b(motor_3_b_), motor_4_a(motor_4_a_), motor_4_b(motor_4_b_) {
+Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t* own_dir_) : motor_1_a(motor_1_a_), motor_1_b(motor_1_b_), motor_2_a(motor_2_a_), motor_2_b(motor_2_b_), motor_3_a(motor_3_a_), motor_3_b(motor_3_b_), motor_4_a(motor_4_a_), motor_4_b(motor_4_b_) {
       motor_1_a = 0;
       motor_1_b = 0;
       motor_2_a = 0;
@@ -11,6 +11,8 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       motor_3_b = 0;
       motor_4_a = 0;
       motor_4_b = 0;
+
+      this->own_dir = own_dir_;
 
       addPowerTimer.start();
 }
@@ -37,7 +39,7 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       }
 
       // PID姿勢制御
-      attitudeControlPID.Compute(own_dir, robot_angle_);
+      attitudeControlPID.Compute(*own_dir, robot_angle_);
       attitudeControlPID.SetLimit(pid_limit_);
       float tmp_pid = attitudeControlPID.Get();
 
@@ -68,7 +70,7 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       if (addPowerTimer.read() > 0.01) {
             for (uint8_t i = 0; i < MOTOR_QTY; i++) {
                   if (abs(power[i]) > 10) {
-                        if (encoder_val[i] < abs(power[i]) / 8) {
+                        if (encoder_val[i] < abs(power[i]) / 10) {
                               if (add_power[i] < 75) add_power[i] += 1;
                         } else {
                               if (add_power[i] > 1) add_power[i] -= 1;
@@ -80,9 +82,9 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
             addPowerTimer.reset();
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if(power[i] > 0){
+            if (power[i] > 0) {
                   power[i] += add_power[i];
-            }else{
+            } else {
                   power[i] -= add_power[i];
             }
       }
