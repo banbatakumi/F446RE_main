@@ -13,25 +13,6 @@ Lidar::Lidar(PinName tx_, PinName rx_) : serial(tx_, rx_) {
 }
 
 void Lidar::Receive() {
-      /*
-      if (serial.getc() == 0xFF) {   // ヘッダーがあることを確認
-            const uint8_t recv_byte_num = 17;
-            uint8_t recv_byte[recv_byte_num];
-
-            for (int i = 0; i < recv_byte_num; i++) {
-                  //recv_byte[i] = serial.getc();   // 一旦すべてのデータを格納する
-            }
-            if (recv_byte[recv_byte_num - 1] == 0xAA) {   // フッターがあることを確認
-                  for (uint8_t i = 0; i < 16; i++) {
-                        val[i] = recv_byte[i];
-                  }
-            } else {
-                  return;
-            }
-      } else {
-            return;
-      }*/
-
       static uint8_t data_length;   // データの長さ
 
       if (data_length == 0) {   // ヘッダの受信
@@ -41,7 +22,7 @@ void Lidar::Receive() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 1) { 
+      } else if (data_length == 1) {
             val[0] = serial.getc();
             data_length += 1;
       } else if (data_length == 2) {

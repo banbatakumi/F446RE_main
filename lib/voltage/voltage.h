@@ -12,11 +12,14 @@ class Voltage {
       Voltage(PinName battery_voltage_);
       void Read();
       float Get();
+      bool IsLowVoltage();
+      void SetLowVoltageTh(float low_voltage_th_ = 6.0);
 
      private:
       AnalogIn battery_voltage;
 
       float battery_voltage_val;
+      float low_voltage_th;
 
       Timer sampling_timer;
 };

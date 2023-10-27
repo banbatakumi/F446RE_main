@@ -9,12 +9,20 @@
 
 class Cam {
      public:
-      Cam(PinName tx_, PinName rx_, int16_t* own_dir_, uint8_t* mode_);
+      Cam(PinName tx_, PinName rx_, int16_t* own_dir_);
 
-      int16_t GetBallDir();
-      uint8_t GetBallDis();
-      int16_t GetGoalDir(uint8_t which_);
-      uint8_t GetGoalSize(uint8_t which_);
+      int16_t ball_dir;
+      uint8_t ball_dis;
+
+      int16_t yellow_goal_dir;
+      uint8_t yellow_goal_size;
+      int16_t blue_goal_dir;
+      uint8_t blue_goal_size;
+
+      int16_t front_goal_dir;
+      uint8_t front_goal_size;
+      int16_t back_goal_dir;
+      uint8_t back_goal_size;
 
 #define FRONT 0
 #define BACK 1
@@ -27,18 +35,6 @@ class Cam {
 
       int16_t* own_dir;
       uint8_t* mode;
-
-      int16_t ball_dir;
-      uint8_t ball_dis;
-      int16_t yellow_goal_dir;
-      uint8_t yellow_goal_size;
-      int16_t blue_goal_dir;
-      uint8_t blue_goal_size;
-
-      int16_t front_goal_dir;
-      uint8_t front_goal_size;
-      int16_t back_goal_dir;
-      uint8_t back_goal_size;
 
       int16_t own_x;
       int16_t own_y;

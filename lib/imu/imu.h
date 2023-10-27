@@ -9,6 +9,7 @@ class Imu {
       Imu(PinName tx_, PinName rx_);
 
       int16_t GetDir();
+      void SetZero();
 
      private:
       RawSerial serial;
@@ -17,8 +18,6 @@ class Imu {
 
       int16_t dir;
       int16_t dir_correction;
-
-      bool is_dir_correction = 0;
 };
 
 #endif

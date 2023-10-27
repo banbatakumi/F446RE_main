@@ -33,3 +33,7 @@ void Imu::Receive() {
 int16_t Imu::GetDir() {
       return dir;
 }
+
+void Imu::SetZero() {
+      dir_correction += dir;
+}
