@@ -20,7 +20,6 @@
 #define VOLTAGE_CNT_NUM 1200   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define LINE_UART_SPEED 115200
 #define UI_UART_SPEED 115200
 
 // グローバル変数定義
@@ -51,9 +50,9 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Lidar lidar(PC_12, PD_2);   // TX, RX
+Lidar lidar(PC_12, PD_2, 115200);   // TX, RX
 Cam cam(PA_0, PA_1, &own_dir);
-Imu imu(PA_9, PA_10);
+Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3, &mode);
 
 DigitalOut led[2] = {PA_5, PA_6};
@@ -71,6 +70,8 @@ typedef struct {
       uint8_t front_goal_size;
       int16_t back_goal_dir;
       uint8_t back_goal_size;
+      int16_t own_x;
+      int16_t own_y;
 } type_camera;
 
 typedef struct {

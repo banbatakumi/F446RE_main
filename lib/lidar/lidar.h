@@ -9,7 +9,7 @@
 #define TOF_QTY 16
 class Lidar {
      public:
-      Lidar(PinName tx_, PinName rx_);
+      Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_);
 
       int16_t FrontSafeDir(uint16_t dis_limit_ = 256);
       int16_t SafeDir(uint16_t dis_limit_ = 256);
