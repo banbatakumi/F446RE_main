@@ -20,35 +20,8 @@ void Line::Receive() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 1) {
-            recv_data[0] = serial.getc();
-            data_length++;
-      } else if (data_length == 2) {
-            recv_data[1] = serial.getc();
-            data_length++;
-      } else if (data_length == 3) {
-            recv_data[2] = serial.getc();
-            data_length++;
-      } else if (data_length == 4) {
-            recv_data[3] = serial.getc();
-            data_length++;
-      } else if (data_length == 5) {
-            recv_data[4] = serial.getc();
-            data_length++;
-      } else if (data_length == 6) {
-            recv_data[5] = serial.getc();
-            data_length++;
-      } else if (data_length == 7) {
-            recv_data[6] = serial.getc();
-            data_length++;
-      } else if (data_length == 8) {
-            recv_data[7] = serial.getc();
-            data_length++;
-      } else if (data_length == 9) {
-            recv_data[8] = serial.getc();
-            data_length++;
       } else if (data_length == 10) {
-            if(serial.getc() == 0xAA){
+            if (serial.getc() == 0xAA) {
                   encoder_val[0] = recv_data[0];
                   encoder_val[1] = recv_data[1];
                   encoder_val[2] = recv_data[2];
@@ -65,6 +38,9 @@ void Line::Receive() {
                   serial.putc(*mode);
             }
             data_length = 0;
+      } else {
+            recv_data[data_length - 1] = serial.getc();
+            data_length++;
       }
 }
 

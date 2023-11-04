@@ -22,33 +22,6 @@ void Cam::Receive() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 1) {
-            recv_data[0] = serial.getc();
-            data_length++;
-      } else if (data_length == 2) {
-            recv_data[1] = serial.getc();
-            data_length++;
-      } else if (data_length == 3) {
-            recv_data[2] = serial.getc();
-            data_length++;
-      } else if (data_length == 4) {
-            recv_data[3] = serial.getc();
-            data_length++;
-      } else if (data_length == 5) {
-            recv_data[4] = serial.getc();
-            data_length++;
-      } else if (data_length == 6) {
-            recv_data[5] = serial.getc();
-            data_length++;
-      } else if (data_length == 7) {
-            recv_data[6] = serial.getc();
-            data_length++;
-      } else if (data_length == 8) {
-            recv_data[7] = serial.getc();
-            data_length++;
-      } else if (data_length == 9) {
-            recv_data[8] = serial.getc();
-            data_length++;
       } else if (data_length == 10) {
             if (serial.getc() == 0xAA) {
                   ball_dir_plus = recv_data[0];
@@ -64,6 +37,9 @@ void Cam::Receive() {
                   ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
                   yellow_goal_dir = SimplifyDeg(yellow_goal_dir_plus == 0 ? yellow_goal_dir_minus * -1 : yellow_goal_dir_plus);
                   blue_goal_dir = SimplifyDeg(blue_goal_dir_plus == 0 ? blue_goal_dir_minus * -1 : blue_goal_dir_plus);
+
+                  ball_x = (200 - ball_dis) * MySin(ball_dir);
+                  ball_y = (200 - ball_dis) * MyCos(ball_dir);
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
                   if (abs(SimplifyDeg(yellow_goal_dir - *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir - *own_dir)) >= 90) {
@@ -86,18 +62,8 @@ void Cam::Receive() {
             }
 
             data_length = 0;
+      } else {
+            recv_data[data_length - 1] = serial.getc();
+            data_length++;
       }
-}
-
-int16_t Cam::GetOwnX() {
-      int16_t front_line_slope = tan((90 - front_goal_dir) * PI / 180);
-      int16_t back_line_slope = tan((90 - back_goal_dir) * PI / 180);
-      own_x = 200 / (back_line_slope - front_line_slope);
-      return own_x;
-}
-int16_t Cam::GetOwnY() {
-      int16_t front_line_slope = tan((90 - front_goal_dir) * PI / 180);
-      int16_t back_line_slope = tan((90 - back_goal_dir) * PI / 180);
-      own_y = (200 * back_line_slope) / (back_line_slope - front_line_slope) - 100;
-      return own_y;
 }

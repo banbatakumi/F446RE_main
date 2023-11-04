@@ -19,14 +19,8 @@ void Imu::Receive() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 1) {
-            recv_data[0] = serial.getc();
-            data_length++;
-      } else if (data_length == 2) {
-            recv_data[1] = serial.getc();
-            data_length++;
       } else if (data_length == 3) {
-            if(serial.getc() == 0xAA){
+            if (serial.getc() == 0xAA) {
                   dir_plus = recv_data[0];
                   dir_minus = recv_data[1];
 
@@ -34,6 +28,9 @@ void Imu::Receive() {
             }
 
             data_length = 0;
+      } else {
+            recv_data[data_length - 1] = serial.getc();
+            data_length++;
       }
 }
 

@@ -13,7 +13,6 @@ class Imu {
 
      private:
       RawSerial serial;
-
       void Receive();
 
       int16_t dir;

@@ -17,7 +17,17 @@ uint8_t Hold::GetVal() {
 
 bool Hold::IsHold() {
       bool is_catch = 0;
-      if (rc_val < CATCH_TH) is_catch = 1;   // キャッチしたかの判定
+      if (rc_val < th) is_catch = 1;   // キャッチしたかの判定
 
       return is_catch;
+}
+
+void Hold::SetTh() {
+      th = 0;
+      for (uint16_t i = 0; i < SET_TH_NUM; i++) {
+            Read();
+            th += rc_val;
+      }
+      th /= SET_TH_NUM;
+      th -= 25;
 }

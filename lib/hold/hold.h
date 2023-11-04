@@ -4,20 +4,22 @@
 #include "mbed.h"
 
 #define RC 0.5
-#define CATCH_TH 150
-
+#define SET_TH_NUM 250
 class Hold {
      public:
       Hold(PinName sensor_);
       void Read();
       uint8_t GetVal();
       bool IsHold();
+      void SetTh();
 
      private:
       AnalogIn sensor;
 
       uint8_t val;
       uint8_t rc_val;
+
+      uint16_t th;
 };
 
 #endif

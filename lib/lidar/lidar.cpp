@@ -4,7 +4,7 @@
 
 Lidar::Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_) {
       serial.baud(serial_baud_);
-      serial.attach(callback(this, &Lidar::Receive), Serial::RxIrq);
+      // serial.attach(callback(this, &Lidar::Receive), Serial::RxIrq);
 
       for (uint8_t i = 0; i < TOF_QTY; i++) {   // それぞれのセンサにベクトルを与える
             unit_vector_x[i] = MyCos(i * 360.00000 / TOF_QTY);
@@ -13,100 +13,54 @@ Lidar::Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_)
 }
 
 void Lidar::Receive() {
-      static uint8_t data_length;   // データの長さ
-      static uint8_t recv_data[8];
-      static bool which_data;
+      if (serial.readable()) {
+            static uint8_t data_length;   // データの長さ
+            static uint8_t recv_data[8];
+            static bool which_data;
 
-      if (data_length == 0) {   // ヘッダの受信
-            uint8_t head = serial.getc();
-            if (head == 0xAF) {
-                  data_length++;
-                  which_data = 0;
-            } else if (head == 0xFF) {
-                  data_length++;
-                  which_data = 1;
-            } else {
-                  data_length = 0;
-            }
-      } else if (data_length == 1) {
-            if(which_data == 0){
-                  recv_data[0] = serial.getc();
-            }else{
-                  recv_data[0] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 2) {
-            if (which_data == 0) {
-                  recv_data[1] = serial.getc();
-            } else {
-                  recv_data[1] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 3) {
-            if (which_data == 0) {
-                  recv_data[2] = serial.getc();
-            } else {
-                  recv_data[2] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 4) {
-            if (which_data == 0) {
-                  recv_data[3] = serial.getc();
-            } else {
-                  recv_data[3] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 5) {
-            if (which_data == 0) {
-                  recv_data[4] = serial.getc();
-            } else {
-                  recv_data[4] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 6) {
-            if (which_data == 0) {
-                  recv_data[5] = serial.getc();
-            } else {
-                  recv_data[5] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 7) {
-            if (which_data == 0) {
-                  recv_data[6] = serial.getc();
-            } else {
-                  recv_data[6] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 8) {
-            if (which_data == 0) {
-                  recv_data[7] = serial.getc();
-            } else {
-                  recv_data[7] = serial.getc();
-            }
-            data_length++;
-      } else if (data_length == 9) {
-            if (serial.getc() == 0xAA) {
-                  if (which_data == 0) {
-                        val[0] = recv_data[0];
-                        val[2] = recv_data[1];
-                        val[4] = recv_data[2];
-                        val[6] = recv_data[3];
-                        val[8] = recv_data[4];
-                        val[10] = recv_data[5];
-                        val[12] = recv_data[6];
-                        val[14] = recv_data[7];
+            if (data_length == 0) {   // ヘッダの受信
+                  uint8_t head = serial.getc();
+                  if (head == 0xAF) {
+                        data_length++;
+                        which_data = 0;
+                  } else if (head == 0xFF) {
+                        data_length++;
+                        which_data = 1;
                   } else {
-                        val[1] = recv_data[0];
-                        val[3] = recv_data[1];
-                        val[5] = recv_data[2];
-                        val[7] = recv_data[3];
-                        val[9] = recv_data[4];
-                        val[11] = recv_data[5];
-                        val[13] = recv_data[6];
-                        val[15] = recv_data[7];
+                        data_length = 0;
                   }
+            } else if (data_length == 9) {
+                  if (serial.getc() == 0xAA) {
+                        if (which_data == 0) {
+                              val[0] = recv_data[0];
+                              val[2] = recv_data[1];
+                              val[4] = recv_data[2];
+                              val[6] = recv_data[3];
+                              val[8] = recv_data[4];
+                              val[10] = recv_data[5];
+                              val[12] = recv_data[6];
+                              val[14] = recv_data[7];
+                        } else {
+                              val[1] = recv_data[0];
+                              val[3] = recv_data[1];
+                              val[5] = recv_data[2];
+                              val[7] = recv_data[3];
+                              val[9] = recv_data[4];
+                              val[11] = recv_data[5];
+                              val[13] = recv_data[6];
+                              val[15] = recv_data[7];
+                        }
+                  }
+
+                  data_length = 0;
+            } else {
+                  if (which_data == 0) {
+                        recv_data[data_length - 1] = serial.getc();
+                  } else {
+                        recv_data[data_length - 1] = serial.getc();
+                  }
+                  data_length++;
             }
-            data_length = 0;
       }
 }
 

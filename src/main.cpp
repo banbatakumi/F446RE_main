@@ -4,12 +4,12 @@
 void setup() {
       // UART初期設定
       uiSerial.baud(UI_UART_SPEED);
-      uiSerial.attach(&Ui, Serial::RxIrq);
+      // uiSerial.attach(&Ui, Serial::RxIrq);
 
       // モーター
       motor.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
       motor.SetAttitudeControlPID(1.5, 0, 0.075);   // デフォルトゲイン：(1.5, 0, 0.075)
-      motor.SetMovingAveLength(25);
+      motor.SetMovingAveLength(20);
       motor.SetPowerMaxLimit(80);
       motor.SetPowerMinLimit(5);
 
@@ -23,15 +23,23 @@ void setup() {
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PI_D_TYPE);
 
-      wrapDisPID.SetGain(1, 0, 1);
+      wrapDisPID.SetGain(0.5, 0, 1);
       wrapDisPID.SetSamplingPeriod(0.01);
       wrapDisPID.SetLimit(100);
       wrapDisPID.SelectType(PI_D_TYPE);
 
+      defencePID.SetGain(1.5, 0, 1);
+      defencePID.SetSamplingPeriod(0.01);
+      defencePID.SetLimit(100);
+      defencePID.SelectType(PI_D_TYPE);
+
       // キッカー
       kicker.SetPower(75);   // 100まで
 
-      voltage.SetLowVoltageTh(4.0);
+      holdFront.SetTh();
+      holdBack.SetTh();
+
+      voltage.SetLowVoltageTh(6.0);
 }
 
 int main() {
@@ -49,6 +57,8 @@ int main() {
                   motor.encoder_val[3] = sensors.encoder_val[3];
 
                   GetSensors();
+                  lidar.Receive();
+                  if (uiSerial.readable()) Ui();
 
                   if (mode == 0) {
                         motor.Free();
@@ -59,7 +69,11 @@ int main() {
                               OffenceMove();
                         }
                   } else if (mode == 2) {
-                        DefenceMove();
+                        if (sensors.line_white_num != 0) {
+                              motor.Run(SimplifyDeg(sensors.line_vector - 180), line_moving_speed);
+                        } else {
+                              DefenceMove();
+                        }
                   } else if (mode == 3) {
                         motor.Free();
                   } else if (mode == 4) {
@@ -98,19 +112,19 @@ void OffenceMove() {
                   }
             } else if (holdFront.IsHold()) {   // 前に捕捉している時
                   static uint8_t kick_cnt = 0;
-                  if (camera.front_goal_size > 25 && abs(camera.front_goal_dir) < 15) {   // キッカーを打つ条件
+                  if (camera.front_goal_size > 25 && abs(camera.front_goal_dir) < 30) {   // キッカーを打つ条件
                         kick_cnt++;
                         dribblerFront.Brake();
-                        if (kick_cnt > 25) {
+                        if (kick_cnt > 20) {
                               kicker.Kick();
                         } else {
-                              motor.Run();
+                              motor.Run(0, moving_speed);
                         }
                   } else {
                         kick_cnt = 0;
                         dribblerFront.Hold(100);
-                        if (lidar.val[lidar.FrontMinSensor()] < 50 && (abs(camera.front_goal_dir) < 30 || camera.front_goal_size == 0)) {
-                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir(50) > 0 ? 1 : -1)), 60);
+                        if (lidar.val[lidar.FrontMinSensor()] < 50 && abs(camera.front_goal_dir) < 30) {
+                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir(50) > 0 ? 1 : -1)), moving_speed);
                         } else {
                               if (abs(camera.front_goal_dir) < 30) {
                                     motor.Run(camera.front_goal_dir * 2, moving_speed);
@@ -123,29 +137,29 @@ void OffenceMove() {
                   static uint8_t kick_cnt = 0;
                   if (camera.front_goal_size > 25 && abs(camera.front_goal_dir) < 30) {   // カーブシュート開始
                         kick_cnt++;
-                        if (kick_cnt > 25) {
+                        if (kick_cnt > 20) {
                               curveShootTimer.start();
                         } else {
-                              motor.Run();
+                              motor.Run(0, moving_speed);
                         }
                   } else {
                         kick_cnt = 0;
                         dribblerBack.Hold(100);
 
-                        if (lidar.val[lidar.FrontMinSensor()] < 50 && (abs(camera.front_goal_dir) < 30 || camera.front_goal_size == 0)) {
-                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir() > 0 ? 1 : -1)), 60);
+                        if (lidar.val[lidar.FrontMinSensor()] < 100 && abs(camera.front_goal_dir) < 30) {
+                              motor.Run(SimplifyDeg(lidar.FrontMinSensor() * 22.5 + 90 * (lidar.FrontSafeDir() > 0 ? 1 : -1)), 50);
                         } else {
                               motor.Run(camera.front_goal_dir * 2, 40);
                         }
                   }
             } else {
-                  if (abs(camera.ball_dir) < 30 && camera.ball_dis > 175) {
-                        dribblerFront.Hold(75);
+                  if (abs(camera.ball_dir) < 30 && camera.ball_dis > 150) {
+                        dribblerFront.Hold((camera.ball_dis - 150) * 2);
                   } else {
                         dribblerFront.Stop();
                   }
-                  if (abs(camera.ball_dir) > 150 && camera.ball_dis > 175) {
-                        dribblerBack.Hold(75);
+                  if (abs(camera.ball_dir) > 150 && camera.ball_dis > 150) {
+                        dribblerBack.Hold((camera.ball_dis - 150) * 2);
                   } else {
                         dribblerBack.Stop();
                   }
@@ -156,8 +170,8 @@ void OffenceMove() {
                         int16_t wrap_deg_addend;
 
                         // 角度
-                        if (abs(camera.ball_dir) < 60) {
-                              wrap_deg_addend = camera.ball_dir * 1.5;
+                        if (abs(camera.ball_dir) < 30) {
+                              wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10);
                         } else {
                               wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
                         }
@@ -167,8 +181,8 @@ void OffenceMove() {
                         wrapDirPID.Compute(camera.ball_dir, 0);
                         wrapDisPID.Compute(camera.ball_dis, 175);
 
-                        wrap_speed_addend = (25 - abs(camera.ball_dir));
-                        if (abs(camera.ball_dir) > 25) wrap_speed_addend = 0;
+                        wrap_speed_addend = (15 - abs(camera.ball_dir));
+                        if (abs(camera.ball_dir) > 15) wrap_speed_addend = 0;
                         tmp_move_speed = abs(wrapDirPID.Get()) + abs(wrapDisPID.Get()) + wrap_speed_addend;
 
                         if (tmp_move_speed > moving_speed) tmp_move_speed = moving_speed;
@@ -182,8 +196,8 @@ void OffenceMove() {
                         int16_t wrap_deg_addend;
 
                         // 角度
-                        if (abs(inverse_ball_dir) < 60) {
-                              wrap_deg_addend = inverse_ball_dir * 1.5;
+                        if (abs(inverse_ball_dir) < 45) {
+                              wrap_deg_addend = inverse_ball_dir * 2;
                         } else {
                               wrap_deg_addend = 90 * (abs(inverse_ball_dir) / inverse_ball_dir);
                         }
@@ -207,10 +221,24 @@ void OffenceMove() {
 }
 
 void DefenceMove() {
-      if (sensors.line_white_num == 0) {
-            motor.Free();
+      if (curveShootTimer.read() > 0) {   // 後ろドリブラーのマカオシュート
+            dribblerFront.Hold(100);
+            if (curveShootTimer.read() < 0.5) {
+                  motor.Run(0, 0);
+            } else if (curveShootTimer.read() < 0.75) {
+                  motor.Run(0, 75);
+                  dribblerFront.Stop();
+            } else {
+                  curveShootTimer.stop();
+                  curveShootTimer.reset();
+                  kicker.Kick();
+            }
       } else {
-            motor.Run(SimplifyDeg(sensors.line_vector - 180), line_moving_speed);
+            dribblerFront.Stop();
+            motor.Run(0, 0, 0);
+      }
+      if (holdFront.IsHold()) {
+            curveShootTimer.start();
       }
 }
 
@@ -228,8 +256,8 @@ void GetSensors() {
       camera.front_goal_size = cam.front_goal_size;
       camera.back_goal_dir = cam.back_goal_dir;
       camera.back_goal_size = cam.back_goal_size;
-      camera.own_x = cam.GetOwnX();
-      camera.own_y = cam.GetOwnY();
+      camera.ball_x = cam.ball_x;
+      camera.ball_y = cam.ball_y;
 
       sensors.hold_front = holdFront.IsHold();
       sensors.hold_back = holdBack.IsHold();
@@ -260,27 +288,9 @@ void Ui() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 1) {
-            recv_data[0] = uiSerial.getc() - 100;
-            data_length++;
-      } else if (data_length == 2) {
-            recv_data[1] = uiSerial.getc();
-            data_length++;
-      } else if (data_length == 3) {
-            recv_data[2] = uiSerial.getc();
-            data_length++;
-      } else if (data_length == 4) {
-            recv_data[3] = uiSerial.getc();
-            data_length++;
-      } else if (data_length == 5) {
-            recv_data[4] = uiSerial.getc();
-            data_length++;
-      } else if (data_length == 6) {
-            recv_data[5] = uiSerial.getc();
-            data_length++;
       } else if (data_length == 7) {
             if (uiSerial.getc() == 0xAA) {
-                  item = recv_data[0];
+                  item = recv_data[0] - 100;
                   mode = recv_data[1];
                   is_own_dir_correction = recv_data[2];
                   moving_speed = recv_data[3];
@@ -299,8 +309,8 @@ void Ui() {
                         send_byte[0] = 0xFF;
 
                         if (item == 0) {
-                              int16_t debug_val_1 = camera.own_x;
-                              int16_t debug_val_2 = camera.own_y;
+                              int16_t debug_val_1 = camera.ball_x;
+                              int16_t debug_val_2 = camera.ball_y;
                               int16_t debug_val_3 = camera.back_goal_dir;
                               int16_t debug_val_4 = camera.back_goal_size;
 
@@ -325,12 +335,33 @@ void Ui() {
                                     uiSerial.putc(send_byte[i]);
                               }
                         } else if (item == 2) {
-                              send_byte_num = 20;
+                              static uint8_t which_data_send = 0;
+                              send_byte_num = 12;
                               send_byte[1] = lidar.SafeDir() > 0 ? lidar.SafeDir() : 0;
                               send_byte[2] = lidar.SafeDir() < 0 ? lidar.SafeDir() * -1 : 0;
                               send_byte[3] = lidar.MinSensor();
-                              for (uint8_t i = 0; i < 16; i++) {
-                                    send_byte[i + 4] = lidar.val[i];
+                              which_data_send++;
+                              if (which_data_send >= 4) which_data_send = 0;
+                              if (which_data_send == 0) {
+                                    send_byte[0] = 0xEE;
+                                    for (uint8_t i = 0; i < 4; i++) {
+                                          send_byte[i + 4] = lidar.val[i * 4];
+                                    }
+                              } else if (which_data_send == 1) {
+                                    send_byte[0] = 0xEF;
+                                    for (uint8_t i = 0; i < 4; i++) {
+                                          send_byte[i + 4] = lidar.val[i * 4 + 1];
+                                    }
+                              } else if (which_data_send == 2) {
+                                    send_byte[0] = 0xFE;
+                                    for (uint8_t i = 0; i < 4; i++) {
+                                          send_byte[i + 4] = lidar.val[i * 4 + 2];
+                                    }
+                              } else if (which_data_send == 3) {
+                                    send_byte[0] = 0xFF;
+                                    for (uint8_t i = 0; i < 4; i++) {
+                                          send_byte[i + 4] = lidar.val[i * 4 + 3];
+                                    }
                               }
                               for (uint8_t i = 0; i < send_byte_num; i++) {
                                     uiSerial.putc(send_byte[i]);
@@ -361,6 +392,9 @@ void Ui() {
             }
 
             data_length = 0;
+      } else {
+            recv_data[data_length - 1] = uiSerial.getc();
+            data_length++;
       }
 
       if (mode == 0) {

@@ -11,9 +11,6 @@ class Cam {
      public:
       Cam(PinName tx_, PinName rx_, int16_t* own_dir_);
 
-      int16_t GetOwnX();
-      int16_t GetOwnY();
-
       int16_t ball_dir;
       uint8_t ball_dis;
 
@@ -27,17 +24,16 @@ class Cam {
       int16_t back_goal_dir;
       uint8_t back_goal_size;
 
+      int16_t ball_x, ball_y;
+
      private:
       RawSerial serial;
       void Receive();
 
       int16_t* own_dir;
-      uint8_t* mode;
+      int16_t* mode;
 
       bool is_front_goal_yellow;
-
-      int16_t own_x;
-      int16_t own_y;
 };
 
 #endif

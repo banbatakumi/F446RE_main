@@ -15,12 +15,12 @@ class Lidar {
       int16_t SafeDir(uint16_t dis_limit_ = 256);
       uint8_t FrontMinSensor();
       uint8_t MinSensor();
+      void Receive();
 
       uint8_t val[TOF_QTY];
 
      private:
       RawSerial serial;
-      void Receive();
 
       float unit_vector_x[TOF_QTY];
       float unit_vector_y[TOF_QTY];

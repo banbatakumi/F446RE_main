@@ -20,7 +20,7 @@
 #define VOLTAGE_CNT_NUM 1200   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 115200
+#define UI_UART_SPEED 57600
 
 // グローバル変数定義
 uint8_t mode = 0;
@@ -42,6 +42,8 @@ void GetSensors();
 
 PID wrapDirPID;
 PID wrapDisPID;
+
+PID defencePID;
 
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8, &own_dir);
@@ -70,8 +72,8 @@ typedef struct {
       uint8_t front_goal_size;
       int16_t back_goal_dir;
       uint8_t back_goal_size;
-      int16_t own_x;
-      int16_t own_y;
+      int16_t ball_x;
+      int16_t ball_y;
 } type_camera;
 
 typedef struct {
