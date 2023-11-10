@@ -20,7 +20,7 @@ float Voltage::Get() {
 }
 
 bool Voltage::IsLowVoltage() {
-      static uint8_t voltage_cnt;
+      static uint16_t voltage_cnt;
       bool is_low_voltage = 0;
       if (battery_voltage_val < low_voltage_th) {
             voltage_cnt++;

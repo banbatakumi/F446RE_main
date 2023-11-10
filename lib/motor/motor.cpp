@@ -20,11 +20,12 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
 void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
       int16_t power[MOTOR_QTY];
       uint8_t moving_speed = moving_speed_;
+      int16_t moving_dir = SimplifyDeg(moving_dir_);
 
       if (moving_speed > power_max_limit) moving_speed = power_max_limit;
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir_ - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
@@ -70,7 +71,7 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
       if (addPowerTimer.read() > 0.01) {
             for (uint8_t i = 0; i < MOTOR_QTY; i++) {
                   if (abs(power[i]) > 10) {
-                        if (encoder_val[i] < abs(power[i]) / 7.5) {
+                        if (encoder_val[i] < abs(power[i]) / 7) {
                               if (add_power[i] < 75) add_power[i] += 1;
                         } else {
                               if (add_power[i] > 1) add_power[i] -= 1;

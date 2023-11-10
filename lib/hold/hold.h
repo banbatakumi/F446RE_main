@@ -3,7 +3,7 @@
 
 #include "mbed.h"
 
-#define RC 0.5
+#define RC 0.8
 #define SET_TH_NUM 250
 class Hold {
      public:

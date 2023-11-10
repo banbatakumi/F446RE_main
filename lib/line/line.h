@@ -11,22 +11,20 @@ class Line {
       Line(PinName tx_, PinName rx_, uint8_t* mode_);
 
       uint8_t EncoderVal(uint8_t which_sensor_);
-      bool IsLeft();
-      bool IsRight();
-      uint8_t WhiteNum();
-      int16_t Vector();
+
+      uint8_t is_left;
+      uint8_t is_right;
+      uint8_t white_qty;
+      uint8_t interval;
+      int16_t vector;
+      int16_t inside_dir;
+      uint8_t encoder_val[4];
 
      private:
       RawSerial serial;
       void Receive();
 
       uint8_t* mode;
-
-      uint8_t encoder_val[4];
-      uint8_t is_line_left;
-      uint8_t is_line_right;
-      uint8_t line_white_num;
-      int16_t line_vector;
 };
 
 #endif

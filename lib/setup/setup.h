@@ -37,6 +37,7 @@ void Ui();
 
 void OffenceMove();
 void DefenceMove();
+void GoToCenter();
 
 void GetSensors();
 
@@ -52,7 +53,7 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Lidar lidar(PC_12, PD_2, 115200);   // TX, RX
+// Lidar lidar(PC_12, PD_2, 115200);   // TX, RX
 Cam cam(PA_0, PA_1, &own_dir);
 Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3, &mode);
@@ -74,14 +75,18 @@ typedef struct {
       uint8_t back_goal_size;
       int16_t ball_x;
       int16_t ball_y;
+      int16_t center_dir;
+      int16_t center_dis;
 } type_camera;
 
 typedef struct {
       uint8_t encoder_val[4];
       uint8_t is_line_left;
       uint8_t is_line_right;
-      uint8_t line_white_num;
+      uint8_t line_white_qty;
+      uint8_t line_interval;
       int16_t line_vector;
+      int16_t line_inside_dir;
       bool hold_front;
       bool hold_back;
 } type_sensors;

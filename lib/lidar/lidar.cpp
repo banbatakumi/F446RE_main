@@ -4,7 +4,7 @@
 
 Lidar::Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_) {
       serial.baud(serial_baud_);
-      // serial.attach(callback(this, &Lidar::Receive), Serial::RxIrq);
+      serial.attach(callback(this, &Lidar::Receive), Serial::RxIrq);
 
       for (uint8_t i = 0; i < TOF_QTY; i++) {   // それぞれのセンサにベクトルを与える
             unit_vector_x[i] = MyCos(i * 360.00000 / TOF_QTY);
@@ -13,7 +13,7 @@ Lidar::Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_)
 }
 
 void Lidar::Receive() {
-      if (serial.readable()) {
+      //if (serial.readable()) {
             static uint8_t data_length;   // データの長さ
             static uint8_t recv_data[8];
             static bool which_data;
@@ -61,7 +61,7 @@ void Lidar::Receive() {
                   }
                   data_length++;
             }
-      }
+     // }
 }
 
 int16_t Lidar::SafeDir(uint16_t dis_limit_) {
