@@ -16,11 +16,14 @@ void Kicker::SetPower(uint8_t power_) {
 }
 
 void Kicker::Kick() {
-      if (chargeTimer.read() > 0.25) {
-            kickerTimeout.attach_us(mbed::callback(this, &Kicker::flipOff), power);
+      if (chargeTimer.read() > 0.5) {
+            if (enable == 0) {
+                  kickerTimeout.attach_us(mbed::callback(this, &Kicker::flipOff), power);
+                  sig_1 = 1;
+                  sig_2 = 1;
 
-            sig_1 = 1;
-            sig_2 = 1;
+                  enable = 1;
+            }
       } else {
             sig_1 = 1;
             sig_2 = 0;
@@ -30,6 +33,6 @@ void Kicker::Kick() {
 void Kicker::flipOff() {
       sig_1 = 1;
       sig_2 = 0;
-
+      enable = 0;
       chargeTimer.reset();
 }

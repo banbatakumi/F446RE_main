@@ -8,15 +8,18 @@
 
 class Line {
      public:
-      Line(PinName tx_, PinName rx_, uint8_t* mode_);
+      Line(PinName tx_, PinName rx_);
 
       uint8_t EncoderVal(uint8_t which_sensor_);
+      void LedOn();
+      void LedOff();
+      uint8_t GetDepth();
 
       uint8_t is_left;
       uint8_t is_right;
       uint8_t white_qty;
       uint8_t interval;
-      int16_t vector;
+      int16_t dir;
       int16_t inside_dir;
       uint8_t encoder_val[4];
 
@@ -24,7 +27,7 @@ class Line {
       RawSerial serial;
       void Receive();
 
-      uint8_t* mode;
+      bool do_led_on;
 };
 
 #endif

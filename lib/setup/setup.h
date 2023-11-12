@@ -56,12 +56,12 @@ Kicker kicker(PC_0, PC_1);
 // Lidar lidar(PC_12, PD_2, 115200);   // TX, RX
 Cam cam(PA_0, PA_1, &own_dir);
 Imu imu(PA_9, PA_10, 115200);
-Line line(PA_2, PA_3, &mode);
+Line line(PA_2, PA_3);
 
 DigitalOut led[2] = {PA_5, PA_6};
 
 Timer curveShootTimer;
-
+Timer defenceShooTimer;
 typedef struct {
       int16_t ball_dir;
       uint8_t ball_dis;
@@ -85,8 +85,9 @@ typedef struct {
       uint8_t is_line_right;
       uint8_t line_white_qty;
       uint8_t line_interval;
-      int16_t line_vector;
+      int16_t line_dir;
       int16_t line_inside_dir;
+      uint8_t line_depth;
       bool hold_front;
       bool hold_back;
 } type_sensors;

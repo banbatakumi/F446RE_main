@@ -11,7 +11,8 @@ Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
 
 void Cam::Receive() {
       static uint8_t data_length;   // データの長さ
-      static uint8_t recv_data[9];
+      const uint8_t recv_data_num = 9;
+      static uint8_t recv_data[recv_data_num];
       static uint8_t ball_dir_plus, ball_dir_minus;
       static uint8_t yellow_goal_dir_plus, yellow_goal_dir_minus;
       static uint8_t blue_goal_dir_plus, blue_goal_dir_minus;
@@ -22,7 +23,7 @@ void Cam::Receive() {
             } else {
                   data_length = 0;
             }
-      } else if (data_length == 10) {
+      } else if (data_length == recv_data_num + 1) {
             if (serial.getc() == 0xAA) {
                   ball_dir_plus = recv_data[0];
                   ball_dir_minus = recv_data[1];
@@ -35,9 +36,9 @@ void Cam::Receive() {
                   blue_goal_size = recv_data[8];
 
                   // 受信データの合成
-                  ball_dir = SimplifyDeg(ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus);
-                  yellow_goal_dir = SimplifyDeg(yellow_goal_dir_plus == 0 ? yellow_goal_dir_minus * -1 : yellow_goal_dir_plus);
-                  blue_goal_dir = SimplifyDeg(blue_goal_dir_plus == 0 ? blue_goal_dir_minus * -1 : blue_goal_dir_plus);
+                  ball_dir = ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus;
+                  yellow_goal_dir = yellow_goal_dir_plus == 0 ? yellow_goal_dir_minus * -1 : yellow_goal_dir_plus;
+                  blue_goal_dir = blue_goal_dir_plus == 0 ? blue_goal_dir_minus * -1 : blue_goal_dir_plus;
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
                   if (abs(SimplifyDeg(yellow_goal_dir - *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir - *own_dir)) >= 90) {
@@ -77,36 +78,36 @@ int16_t Cam::GetBallY() {
 }
 
 int16_t Cam::GetYellowGoalX() {
-      yellow_goal_x = (200 - yellow_goal_size) * MySin(yellow_goal_dir);
+      yellow_goal_x = (200 - yellow_goal_size) * MyCos(yellow_goal_dir);
       return yellow_goal_x;
 }
 
 int16_t Cam::GetYellowGoalY() {
-      yellow_goal_y = (200 - yellow_goal_size) * MyCos(yellow_goal_dir);
+      yellow_goal_y = (200 - yellow_goal_size) * MySin(yellow_goal_dir);
       return yellow_goal_y;
 }
 
 int16_t Cam::GetBlueGoalX() {
-      blue_goal_x = (200 - blue_goal_size) * MySin(blue_goal_dir);
+      blue_goal_x = (200 - blue_goal_size) * MyCos(blue_goal_dir);
       return blue_goal_x;
 }
 
 int16_t Cam::GetBlueGoalY() {
-      blue_goal_y = (200 - blue_goal_size) * MyCos(blue_goal_dir);
+      blue_goal_y = (200 - blue_goal_size) * MySin(blue_goal_dir);
       return blue_goal_y;
 }
 
 int16_t Cam::GetCenterDir() {
-      float center_x = yellow_goal_x + blue_goal_x;
-      float center_y = blue_goal_x + blue_goal_y;
+      float center_x = GetYellowGoalX() + GetBlueGoalX();
+      float center_y = GetYellowGoalY() + GetBlueGoalY();
 
       center_dir = atan2(center_y, center_x) * 180.00 / PI;
       return center_dir;
 }
 
 int16_t Cam::GetCenterDis() {
-      int16_t center_x = yellow_goal_x + blue_goal_x;
-      int16_t center_y = blue_goal_x + blue_goal_y;
+      int16_t center_x = GetYellowGoalX() + GetBlueGoalX();
+      int16_t center_y = GetYellowGoalY() + GetBlueGoalY();
 
       // center_dis = sqrt(double(pow(center_x, 2)), double(pow(center_y, 2)));
       center_dis = sqrt(center_x * center_x + center_y * center_y);
