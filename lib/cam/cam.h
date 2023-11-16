@@ -13,8 +13,8 @@ class Cam {
 
       int16_t GetBallX();
       int16_t GetBallY();
-      int16_t GetYellowGoalX();
-      int16_t GetYellowGoalY();
+      int16_t GetOwnX();
+      int16_t GetOwnY();
       int16_t GetBlueGoalX();
       int16_t GetBlueGoalY();
       int16_t GetCenterDir();
@@ -40,13 +40,12 @@ class Cam {
       int16_t* own_dir;
       int16_t* mode;
 
-      int16_t ball_x, ball_y;
-      int16_t yellow_goal_x, yellow_goal_y;
-      int16_t blue_goal_x, blue_goal_y;
-      int16_t center_dir;
-      int16_t center_dis;
+      int16_t pre_ball_dir;
+      uint8_t pre_ball_dis;
 
       bool is_front_goal_yellow;
+
+      Timer ballMissTimer;
 };
 
 #endif

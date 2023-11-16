@@ -17,7 +17,7 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       addPowerTimer.start();
 }
 
-void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
+void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
       int16_t power[MOTOR_QTY];
       uint8_t moving_speed = moving_speed_;
       int16_t moving_dir = SimplifyDeg(moving_dir_);
@@ -67,14 +67,14 @@ void Motor::Run(int16_t moving_dir_, uint8_t moving_speed_, int16_t robot_angle_
             }
       }
 
-      static uint8_t add_power[MOTOR_QTY];
+      static float add_power[MOTOR_QTY];
       if (addPowerTimer.read() > 0.01) {
             for (uint8_t i = 0; i < MOTOR_QTY; i++) {
                   if (abs(power[i]) > 10) {
-                        if (encoder_val[i] < abs(power[i]) / 7) {
-                              if (add_power[i] < 75) add_power[i] += 1;
+                        if (encoder_val[i] < abs(power[i]) / 7.000) {
+                              if (add_power[i] < 50) add_power[i] += abs(encoder_val[i] - abs(power[i]) / 7.000) / 5.000;
                         } else {
-                              if (add_power[i] > 1) add_power[i] -= 1;
+                              if (add_power[i] > -50) add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 7.000) / 5.000;
                         }
                   } else {
                         add_power[i] = 0;

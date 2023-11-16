@@ -13,7 +13,7 @@
 class Motor {
      public:
       Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t* own_dir_);
-      void Run(int16_t moving_dir_ = 0, uint8_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t robot_angle_mode_ = 0, uint8_t pid_limit_ = 100);
+      void Run(int16_t moving_dir_ = 0, uint16_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t robot_angle_mode_ = 0, uint8_t pid_limit_ = 100);
       void SetPwmPeriod(uint16_t pwm_period_);
       void SetAttitudeControlPID(float kp_, float ki_, float kd_);
       void SetMovingAveLength(uint8_t length_ = 25);

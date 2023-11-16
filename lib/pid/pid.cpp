@@ -27,16 +27,16 @@ void PID::SelectType(uint8_t type_) {
 
 void PID::Compute(float input_, float target_) {
       if (sampling_timer.read() > sampling_period) {
-            if (type == 0) {
-                  p = SimplifyDeg(target_ - input_);   // 比例
+            if (type == 0) {   // 普通のやつ
+                  p = target_ - input_;   // 比例
                   d = (p - pre_p) / sampling_timer.read();   // 微分
-                  i += (p + pre_p) * sampling_timer.read();   // 積分
+                  i += (p + pre_p) / 2 * sampling_timer.read();   // 積分
                   if (i > limit) i = limit * (i / abs(i));
                   pre_p = p;
 
                   pid = p * kp + i * ki + d * kd;
-            } else if (type == 1) {
-                  p = SimplifyDeg(target_ - input_);   // 比例
+            } else if (type == 1) {   // 微分先行型
+                  p = target_ - input_;   // 比例
                   d = (input_ - pre_input) / sampling_timer.read();   // 微分
                   i += (p + pre_p) / 2 * sampling_timer.read();   // 積分
                   if (i > limit) i = limit * (i / abs(i));

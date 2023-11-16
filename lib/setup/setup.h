@@ -62,6 +62,7 @@ DigitalOut led[2] = {PA_5, PA_6};
 
 Timer curveShootTimer;
 Timer defenceShooTimer;
+Timer lineStopTimer;
 typedef struct {
       int16_t ball_dir;
       uint8_t ball_dis;
@@ -75,6 +76,8 @@ typedef struct {
       uint8_t back_goal_size;
       int16_t ball_x;
       int16_t ball_y;
+      int16_t own_x;
+      int16_t own_y;
       int16_t center_dir;
       int16_t center_dis;
 } type_camera;
