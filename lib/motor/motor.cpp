@@ -72,9 +72,9 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             for (uint8_t i = 0; i < MOTOR_QTY; i++) {
                   if (abs(power[i]) > 10) {
                         if (encoder_val[i] < abs(power[i]) / 7.000) {
-                              if (add_power[i] < 50) add_power[i] += abs(encoder_val[i] - abs(power[i]) / 7.000) / 5.000;
+                              if (add_power[i] < 50) add_power[i] += abs(encoder_val[i] - abs(power[i]) / 7.000) / 2.000;
                         } else {
-                              if (add_power[i] > -50) add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 7.000) / 5.000;
+                              if (add_power[i] > -50) add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 7.000) / 2.000;
                         }
                   } else {
                         add_power[i] = 0;

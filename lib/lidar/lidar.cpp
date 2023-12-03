@@ -15,53 +15,32 @@ Lidar::Lidar(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_)
 void Lidar::Receive() {
       //if (serial.readable()) {
             static uint8_t data_length;   // データの長さ
-            static uint8_t recv_data[8];
-            static bool which_data;
+            const uint8_t recv_data_num = 7;
+            static uint8_t recv_data[recv_data_num];
 
             if (data_length == 0) {   // ヘッダの受信
-                  uint8_t head = serial.getc();
-                  if (head == 0xAF) {
+                  if (serial.getc() == 0xFF) {
                         data_length++;
-                        which_data = 0;
-                  } else if (head == 0xFF) {
-                        data_length++;
-                        which_data = 1;
                   } else {
                         data_length = 0;
                   }
-            } else if (data_length == 9) {
+            } else if (data_length == recv_data_num + 1) {
                   if (serial.getc() == 0xAA) {
-                        if (which_data == 0) {
-                              val[0] = recv_data[0];
-                              val[2] = recv_data[1];
-                              val[4] = recv_data[2];
-                              val[6] = recv_data[3];
-                              val[8] = recv_data[4];
-                              val[10] = recv_data[5];
-                              val[12] = recv_data[6];
-                              val[14] = recv_data[7];
-                        } else {
-                              val[1] = recv_data[0];
-                              val[3] = recv_data[1];
-                              val[5] = recv_data[2];
-                              val[7] = recv_data[3];
-                              val[9] = recv_data[4];
-                              val[11] = recv_data[5];
-                              val[13] = recv_data[6];
-                              val[15] = recv_data[7];
-                        }
+                        val[0] = recv_data[0];
+                        val[1] = recv_data[1];
+                        val[2] = recv_data[2];
+                        val[3] = recv_data[3];
+                        val[4] = recv_data[4];
+                        val[5] = recv_data[5];
+                        val[6] = recv_data[6];
                   }
 
                   data_length = 0;
             } else {
-                  if (which_data == 0) {
-                        recv_data[data_length - 1] = serial.getc();
-                  } else {
-                        recv_data[data_length - 1] = serial.getc();
-                  }
+                  recv_data[data_length - 1] = serial.getc();
                   data_length++;
             }
-     // }
+      //}
 }
 
 int16_t Lidar::SafeDir(uint16_t dis_limit_) {

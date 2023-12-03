@@ -3,7 +3,7 @@
 #include "mbed.h"
 
 Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
-      serial.baud(115200);
+      serial.baud(230400);
       serial.attach(callback(this, &Cam::Receive), Serial::RxIrq);
 
       this->own_dir = own_dir_;
@@ -11,7 +11,7 @@ Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
 
 void Cam::Receive() {
       static uint8_t data_length;   // データの長さ
-      const uint8_t recv_data_num = 9;
+      const uint8_t recv_data_num = 10;
       static uint8_t recv_data[recv_data_num];
       static uint8_t ball_dir_plus, ball_dir_minus;
       static uint8_t yellow_goal_dir_plus, yellow_goal_dir_minus;
@@ -34,23 +34,12 @@ void Cam::Receive() {
                   blue_goal_dir_plus = recv_data[6];
                   blue_goal_dir_minus = recv_data[7];
                   blue_goal_size = recv_data[8];
+                  is_goal_front = recv_data[9];
 
                   // 受信データの合成
                   ball_dir = ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus;
                   yellow_goal_dir = yellow_goal_dir_plus == 0 ? yellow_goal_dir_minus * -1 : yellow_goal_dir_plus;
                   blue_goal_dir = blue_goal_dir_plus == 0 ? blue_goal_dir_minus * -1 : blue_goal_dir_plus;
-
-                  if (ball_dis == 0) ballMissTimer.start();
-
-                  if (ballMissTimer.read() > 0 && ballMissTimer.read() < 2.5) {
-                        ball_dir = pre_ball_dir;
-                        ball_dis = pre_ball_dis;
-                  } else {
-                        pre_ball_dir = ball_dir;
-                        pre_ball_dis = ball_dis;
-                        ballMissTimer.reset();
-                        ballMissTimer.stop();
-                  }
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
                   if (abs(SimplifyDeg(yellow_goal_dir - *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir - *own_dir)) >= 90) {
@@ -90,17 +79,19 @@ int16_t Cam::GetBallY() {
 }
 
 int16_t Cam::GetOwnX() {
-      int16_t own_x = (200 - front_goal_size) * MyCos(front_goal_dir) + (200 - back_goal_size) * MyCos(back_goal_dir);
+      int16_t own_x = (200 - front_goal_size) * MySin(front_goal_dir) + (200 - back_goal_size) * MySin(back_goal_dir);
+      own_x /= -2;
       return own_x;
 }
 
 int16_t Cam::GetOwnY() {
-      int16_t own_y = (200 - front_goal_size) * MySin(front_goal_dir) + (200 - back_goal_size) * MySin(back_goal_dir);
+      int16_t own_y = (200 - front_goal_size) * MyCos(front_goal_dir) + (200 - back_goal_size) * MyCos(back_goal_dir);
+      own_y /= -2;
       return own_y;
 }
 
 int16_t Cam::GetCenterDir() {
-      int16_t center_dir = atan2(GetOwnX(), GetOwnY()) * 180.000 / PI;
+      int16_t center_dir = SimplifyDeg(atan2(GetOwnX(), GetOwnY()) * 180.000 / PI - 180);
       return center_dir;
 }
 

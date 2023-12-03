@@ -3,7 +3,7 @@
 #include "mbed.h"
 
 Line::Line(PinName tx_, PinName rx_) : serial(tx_, rx_) {
-      serial.baud(115200);
+      serial.baud(230400);
       serial.attach(callback(this, &Line::Receive), Serial::RxIrq);
 }
 

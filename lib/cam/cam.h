@@ -33,6 +33,8 @@ class Cam {
       int16_t back_goal_dir;
       uint8_t back_goal_size;
 
+      bool is_goal_front;
+
      private:
       RawSerial serial;
       void Receive();
@@ -40,12 +42,7 @@ class Cam {
       int16_t* own_dir;
       int16_t* mode;
 
-      int16_t pre_ball_dir;
-      uint8_t pre_ball_dis;
-
       bool is_front_goal_yellow;
-
-      Timer ballMissTimer;
 };
 
 #endif
