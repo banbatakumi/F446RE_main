@@ -61,9 +61,12 @@ Line line(PA_2, PA_3);
 DigitalOut led[2] = {PA_5, PA_6};
 
 Timer curveShootTimer;
-Timer defenceShooTimer;
 Timer lineStopTimer;
 Timer goToCenterTimer;
+Timer frontHoldTimer;
+Timer backHoldTimer;
+Timer defenceShooTimer;
+Timer goToGoalTimer;
 typedef struct {
       int16_t ball_dir;
       int16_t inverse_ball_dir;
