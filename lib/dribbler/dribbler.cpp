@@ -6,7 +6,7 @@ Dribbler::Dribbler(PinName motor_a_, PinName motor_b_) : motor_a(motor_a_), moto
       motor_a = 0;
       motor_b = 0;
 
-      motorAve.SetLength(100);
+      motorAve.SetLength(50);
 }
 
 void Dribbler::SetPwmPeriod(uint16_t pwm_period_) {

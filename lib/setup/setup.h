@@ -20,7 +20,7 @@
 #define VOLTAGE_CNT_NUM 1200   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 57600
+#define UI_UART_SPEED 9600
 
 // グローバル変数定義
 uint8_t mode = 0;
@@ -66,6 +66,7 @@ Timer lineStopTimer;
 Timer goToCenterTimer;
 typedef struct {
       int16_t ball_dir;
+      int16_t inverse_ball_dir;
       uint8_t ball_dis;
       int16_t y_goal_dir;
       uint8_t y_goal_size;
