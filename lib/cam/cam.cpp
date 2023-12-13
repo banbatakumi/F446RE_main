@@ -49,14 +49,14 @@ void Cam::Receive() {
                   }
 
                   if (is_front_goal_yellow == 1) {   // 自ゴール青
-                        front_goal_dir = SimplifyDeg(yellow_goal_dir + *own_dir);
+                        front_goal_dir = yellow_goal_dir;
                         front_goal_size = yellow_goal_size;
-                        back_goal_dir = SimplifyDeg(blue_goal_dir + *own_dir);
+                        back_goal_dir = blue_goal_dir;
                         back_goal_size = blue_goal_size;
                   } else {   // 自ゴール黄
-                        front_goal_dir = SimplifyDeg(blue_goal_dir + *own_dir);
+                        front_goal_dir = blue_goal_dir;
                         front_goal_size = blue_goal_size;
-                        back_goal_dir = SimplifyDeg(yellow_goal_dir + *own_dir);
+                        back_goal_dir = yellow_goal_dir;
                         back_goal_size = yellow_goal_size;
                   }
             }

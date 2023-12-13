@@ -10,7 +10,8 @@ class Kicker {
       void SetPower(uint8_t power_ = 100);
 
       void Kick();
-      void flipOff();
+      void ChargeOff();
+      void FlipOff();
 
      private:
       DigitalOut sig_1;
@@ -20,7 +21,8 @@ class Kicker {
       bool enable;
 
       Timer chargeTimer;
-      Timeout kickerTimeout;
+      Timeout ChargeTimeout;
+      Timeout FlipTimeout;
 };
 
 #endif

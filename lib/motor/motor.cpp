@@ -69,11 +69,13 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
 
       static float add_power[MOTOR_QTY];
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (abs(power[i]) > 10) {
+            if (abs(power[i]) > 10 && addPowerTimer.read() < 0.1) {
                   if (encoder_val[i] < abs(power[i]) / 6.000) {
-                        if (add_power[i] < 75) add_power[i] += abs(encoder_val[i] - abs(power[i]) / 6.000) * 100 * addPowerTimer.read();
+                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / 6.000) * 50 * addPowerTimer.read();
+                        if (add_power[i] > 75) add_power[i] = 75;
                   } else {
-                        if (add_power[i] > 0) add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 6.000) * 50 * addPowerTimer.read();
+                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 6.000) * 50 * addPowerTimer.read();
+                        if (add_power[i] < 0) add_power[i] = 0;
                   }
             } else {
                   add_power[i] = 0;
@@ -88,17 +90,17 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             }
       }
 
-      // 移動平均フィルタ
-      motor1Ave.Compute(&power[0]);
-      motor2Ave.Compute(&power[1]);
-      motor3Ave.Compute(&power[2]);
-      motor4Ave.Compute(&power[3]);
-
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             if (power[i] > power_max_limit) {
                   power[i] = power_max_limit * (abs(power[i]) / power[i]);
             }
       }
+
+      // 移動平均フィルタ
+      motor1Ave.Compute(&power[0]);
+      motor2Ave.Compute(&power[1]);
+      motor3Ave.Compute(&power[2]);
+      motor4Ave.Compute(&power[3]);
 
       // モーターへ出力
       motor_1_a = abs(power[0]) < power_min_limit ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);
