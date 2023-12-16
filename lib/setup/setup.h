@@ -42,7 +42,6 @@ void GoToCenter();
 void GetSensors();
 
 PID wrapDirPID;
-PID wrapDisPID;
 
 PID defencePID;
 

@@ -50,19 +50,19 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
                   power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
             } else if (robot_angle_mode_ == 1) {   // ボールを前に捕捉した状態
                   if (i == 1 || i == 2) {
-                        power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
                   }
             } else if (robot_angle_mode_ == 2) {   // ボールを右に捕捉した状態
                   if (i == 2 || i == 3) {
-                        power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
                   }
             } else if (robot_angle_mode_ == 3) {   // ボールを後ろに捕捉した状態
                   if (i == 0 || i == 3) {
-                        power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
                   }
             } else if (robot_angle_mode_ == 4) {   // ボールを左に捕捉した状態
                   if (i == 0 || i == 1) {
-                        power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
                   }
             }
       }
@@ -70,11 +70,11 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
       static float add_power[MOTOR_QTY];
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             if (abs(power[i]) > 10 && addPowerTimer.read() < 0.1) {
-                  if (encoder_val[i] < abs(power[i]) / 6.000) {
-                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / 6.000) * 50 * addPowerTimer.read();
-                        if (add_power[i] > 75) add_power[i] = 75;
+                  if (encoder_val[i] < abs(power[i]) / encoder_gain) {
+                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 50 * addPowerTimer.read();
+                        if (add_power[i] > 50) add_power[i] = 50;
                   } else {
-                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / 6.000) * 50 * addPowerTimer.read();
+                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 50 * addPowerTimer.read();
                         if (add_power[i] < 0) add_power[i] = 0;
                   }
             } else {
@@ -143,6 +143,10 @@ void Motor::SetPowerMaxLimit(uint8_t limit_) {
 
 void Motor::SetPowerMinLimit(uint8_t limit_) {
       power_min_limit = limit_;
+}
+
+void Motor::SetEncoderGain(float gain_) {
+      encoder_gain = gain_;
 }
 
 void Motor::Brake(uint16_t brake_time_) {

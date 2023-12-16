@@ -19,6 +19,7 @@ class Motor {
       void SetMovingAveLength(uint8_t length_ = 25);
       void SetPowerMaxLimit(uint8_t limit_ = 100);
       void SetPowerMinLimit(uint8_t limit_ = 0);
+      void SetEncoderGain(float gain_ = 6.6);
       void Brake(uint16_t brake_time_ = 0);
       void Free();
 
@@ -48,6 +49,7 @@ class Motor {
 
       uint8_t power_max_limit;
       uint8_t power_min_limit;
+      float encoder_gain;
 
       int16_t* own_dir;
 
