@@ -34,8 +34,6 @@ void setup() {
 
       holdFront.SetTh();
       holdBack.SetTh();
-
-      voltage.SetLowVoltageTh(6.0);
 }
 
 int main() {
@@ -44,138 +42,132 @@ int main() {
       while (1) {
             voltage.Read();
 
-            // バッテリー電圧降下による動作停止
-            if (voltage.IsLowVoltage()) {
+            for (uint8_t i = 0; i < 4; i++) {
+                  motor.encoder_val[i] = sensors.encoder_val[i];
+            }
+
+            GetSensors();
+            // lidar.Receive();
+            if (uiSerial.readable()) Ui();
+
+            if (mode == 0) {
                   motor.Free();
-            } else {
-                  motor.encoder_val[0] = sensors.encoder_val[0];
-                  motor.encoder_val[1] = sensors.encoder_val[1];
-                  motor.encoder_val[2] = sensors.encoder_val[2];
-                  motor.encoder_val[3] = sensors.encoder_val[3];
-
-                  GetSensors();
-                  // lidar.Receive();
-                  if (uiSerial.readable()) Ui();
-
-                  if (mode == 0) {
-                        motor.Free();
-                  } else if (mode == 1) {
-                        static bool is_pre_line_left = 0;
-                        static bool is_pre_line_right = 0;
-                        if (sensors.line_white_qty != 0 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {   // ラインセンサの処理
-                              float vector_x, vector_y, vector_mag;
-
-                              if (abs(camera.ball_dir) < 135) {
-                                    vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * 0.75;
-                                    vector_y = sensors.line_depth * MyCos(sensors.line_inside_dir) * 0.75;
-                                    vector_x += ((24 - sensors.line_depth) * MySin(camera.ball_dir * 2)) * 0.25;
-                                    vector_y += ((24 - sensors.line_depth) * MyCos(camera.ball_dir * 2)) * 0.25;
-                              } else {
-                                    vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * 0.75;
-                                    vector_y = sensors.line_depth * MyCos(sensors.line_inside_dir) * 0.75;
-                                    vector_x += ((24 - sensors.line_depth) * MySin(camera.ball_dir)) * 0.25;
-                                    vector_y += ((24 - sensors.line_depth) * MyCos(camera.ball_dir)) * 0.25;
-                              }
-                              vector_mag = abs(sqrt(pow(vector_x, 2) + pow(vector_y, 2)));
-
-                              if (abs(camera.ball_dir) < 45 && camera.ball_dis > 150) {
-                                    dribblerFront.Hold(100);
-                              } else {
-                                    dribblerFront.Hold(0);
-                              }
-                              if (abs(camera.inverse_ball_dir) < 45 && camera.ball_dis > 150) {
-                                    dribblerBack.Hold(100);
-                              } else {
-                                    dribblerBack.Hold(0);
-                              }
-
-                              if (sensors.is_line_left == 1) is_pre_line_left = 1;
-                              if (sensors.is_line_right == 1) is_pre_line_right = 1;
-
-                              lineStopTimer.start();
-                              if (lineStopTimer.read_ms() < 250 || lineStopTimer.read_ms() > 5000 || camera.ball_dis == 0) {
-                                    if (sensors.line_white_qty != 0) {
-                                          motor.Run(sensors.line_inside_dir, line_moving_speed);
-                                    } else if (sensors.is_line_left == 1) {
-                                          motor.Run(90, line_moving_speed);
-                                    } else if (sensors.is_line_right == 1) {
-                                          motor.Run(-90, line_moving_speed);
-                                    }
-                              } else if (holdFront.IsHold()) {
-                                    if (sensors.line_white_qty != 0) {
-                                          motor.Run(sensors.line_inside_dir, 25, 0, FRONT, 10);
-                                    } else if (sensors.is_line_left == 1) {
-                                          motor.Run(90, 25, 0, FRONT, 10);
-                                    } else if (sensors.is_line_right == 1) {
-                                          motor.Run(-90, 25, 0, FRONT, 10);
-                                    }
-                              } else if (holdBack.IsHold()) {
-                                    if (sensors.line_white_qty != 0) {
-                                          motor.Run(sensors.line_inside_dir, 25, 0, BACK, 10);
-                                    } else if (sensors.is_line_left == 1) {
-                                          motor.Run(90, 25, 0, BACK, 10);
-                                    } else if (sensors.is_line_right == 1) {
-                                          motor.Run(-90, 25, 0, BACK, 10);
-                                    }
-                              } else {
-                                    if (sensors.line_white_qty != 0) {
-                                          uint16_t tmp_moving_speed = vector_mag * 5;
-                                          if (tmp_moving_speed > line_moving_speed) tmp_moving_speed = line_moving_speed;
-                                          if (abs(camera.ball_dir + own_dir) < 90) {
-                                                motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, tmp_moving_speed, camera.ball_dir + own_dir, FRONT, 10);
-                                          } else {
-                                                motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, tmp_moving_speed, camera.inverse_ball_dir + own_dir, BACK, 10);
-                                          }
-                                    } else if (sensors.is_line_left == 1) {
-                                          if (abs(camera.ball_dir + own_dir) < 90) {
-                                                motor.Run(-90, 50, camera.ball_dir + own_dir, FRONT, 10);
-                                          } else {
-                                                motor.Run(-90, 50, camera.inverse_ball_dir + own_dir, BACK, 10);
-                                          }
-                                    } else if (sensors.is_line_right == 1) {
-                                          if (abs(camera.ball_dir + own_dir) < 90) {
-                                                motor.Run(90, 50, camera.ball_dir + own_dir, FRONT, 10);
-                                          } else {
-                                                motor.Run(90, 50, camera.inverse_ball_dir + own_dir, BACK, 10);
-                                          }
-                                    }
-                              }
-                        } else if (camera.ball_dis == 0) {   // ボールがない時の処理
-                              goToCenterTimer.start();
-                              if (goToCenterTimer.read_ms() > 500) {
-                                    motor.Run(camera.center_dir, camera.center_dis * 5);
-                              } else {
-                                    motor.Run();
-                              }
-
-                              dribblerFront.Hold(0);
-                              dribblerBack.Hold(0);
+            } else if (mode == 1) {
+                  static bool is_pre_line_left = 0;
+                  static bool is_pre_line_right = 0;
+                  if (sensors.line_white_qty != 0 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {   // ラインセンサの処理
+                        if (abs(camera.ball_dir) < 45 && camera.ball_dis > 150) {
+                              dribblerFront.Hold(100);
                         } else {
-                              if (lineStopTimer.read_ms() > 500) {
-                                    lineStopTimer.stop();
-                                    lineStopTimer.reset();
-                                    is_pre_line_left = 0;
-                                    is_pre_line_right = 0;
-                              }
-                              goToCenterTimer.reset();
+                              dribblerFront.Hold(0);
+                        }
+                        if (abs(camera.inverse_ball_dir) < 45 && camera.ball_dis > 150) {
+                              dribblerBack.Hold(100);
+                        } else {
+                              dribblerBack.Hold(0);
+                        }
 
-                              if (is_pre_line_left == 1 && lineStopTimer.read_ms() < 100) {
+                        if (sensors.is_line_left == 1) is_pre_line_left = 1;
+                        if (sensors.is_line_right == 1) is_pre_line_right = 1;
+
+                        float vector_x, vector_y, vector_mag;
+
+                        if (abs(camera.ball_dir) < 135) {
+                              vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * 0.75;
+                              vector_y = sensors.line_depth * MyCos(sensors.line_inside_dir) * 0.75;
+                              vector_x += ((24 - sensors.line_depth) * MySin(camera.ball_dir * 2)) * 0.25;
+                              vector_y += ((24 - sensors.line_depth) * MyCos(camera.ball_dir * 2)) * 0.25;
+                        } else {
+                              vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * 0.75;
+                              vector_y = sensors.line_depth * MyCos(sensors.line_inside_dir) * 0.75;
+                              vector_x += ((24 - sensors.line_depth) * MySin(camera.ball_dir)) * 0.25;
+                              vector_y += ((24 - sensors.line_depth) * MyCos(camera.ball_dir)) * 0.25;
+                        }
+                        vector_mag = abs(sqrt(pow(vector_x, 2) + pow(vector_y, 2)));
+
+                        lineStopTimer.start();
+                        if (lineStopTimer.read_ms() < 250 || lineStopTimer.read_ms() > 5000 || camera.ball_dis == 0) {
+                              if (sensors.line_white_qty != 0) {
+                                    motor.Run(sensors.line_inside_dir, line_moving_speed);
+                              } else if (sensors.is_line_left == 1) {
                                     motor.Run(90, line_moving_speed);
-                              } else if (is_pre_line_right == 1 && lineStopTimer.read_ms() < 100) {
+                              } else if (sensors.is_line_right == 1) {
                                     motor.Run(-90, line_moving_speed);
-                              } else {
-                                    OffenceMove();
-                                    is_pre_line_left = 0;
-                                    is_pre_line_right = 0;
+                              }
+                        } else if (holdFront.IsHold()) {
+                              if (sensors.line_white_qty != 0) {
+                                    motor.Run(sensors.line_inside_dir, 25, 0, FRONT, 10);
+                              } else if (sensors.is_line_left == 1) {
+                                    motor.Run(90, 25, 0, FRONT, 10);
+                              } else if (sensors.is_line_right == 1) {
+                                    motor.Run(-90, 25, 0, FRONT, 10);
+                              }
+                        } else if (holdBack.IsHold()) {
+                              if (sensors.line_white_qty != 0) {
+                                    motor.Run(sensors.line_inside_dir, 25, 0, BACK, 10);
+                              } else if (sensors.is_line_left == 1) {
+                                    motor.Run(90, 25, 0, BACK, 10);
+                              } else if (sensors.is_line_right == 1) {
+                                    motor.Run(-90, 25, 0, BACK, 10);
+                              }
+                        } else {
+                              if (sensors.line_white_qty != 0) {
+                                    uint16_t tmp_moving_speed = vector_mag * 5;
+                                    if (tmp_moving_speed > line_moving_speed) tmp_moving_speed = line_moving_speed;
+                                    if (abs(camera.ball_dir + own_dir) < 90) {
+                                          motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, tmp_moving_speed, camera.ball_dir + own_dir, FRONT, 10);
+                                    } else {
+                                          motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, tmp_moving_speed, camera.inverse_ball_dir + own_dir, BACK, 10);
+                                    }
+                              } else if (sensors.is_line_left == 1) {
+                                    if (abs(camera.ball_dir + own_dir) < 90) {
+                                          motor.Run(-90, 50, camera.ball_dir + own_dir, FRONT, 10);
+                                    } else {
+                                          motor.Run(-90, 50, camera.inverse_ball_dir + own_dir, BACK, 10);
+                                    }
+                              } else if (sensors.is_line_right == 1) {
+                                    if (abs(camera.ball_dir + own_dir) < 90) {
+                                          motor.Run(90, 50, camera.ball_dir + own_dir, FRONT, 10);
+                                    } else {
+                                          motor.Run(90, 50, camera.inverse_ball_dir + own_dir, BACK, 10);
+                                    }
                               }
                         }
-                  } else if (mode == 2) {
-                        DefenceMove();
-                  } else if (mode == 3) {
-                        motor.Free();
-                  } else if (mode == 4) {
-                        motor.Run(0, 0);
+                  } else if (camera.ball_dis == 0) {   // ボールがない時の処理
+                        goToCenterTimer.start();
+                        if (goToCenterTimer.read_ms() > 500) {
+                              motor.Run(camera.center_dir, camera.center_dis * 5);
+                        } else {
+                              motor.Run();
+                        }
+
+                        dribblerFront.Hold(0);
+                        dribblerBack.Hold(0);
+                  } else {
+                        if (lineStopTimer.read_ms() > 500) {
+                              lineStopTimer.stop();
+                              lineStopTimer.reset();
+                              is_pre_line_left = 0;
+                              is_pre_line_right = 0;
+                        }
+                        goToCenterTimer.reset();
+
+                        if (is_pre_line_left == 1 && lineStopTimer.read_ms() < 100) {
+                              motor.Run(90, line_moving_speed);
+                        } else if (is_pre_line_right == 1 && lineStopTimer.read_ms() < 100) {
+                              motor.Run(-90, line_moving_speed);
+                        } else {
+                              OffenceMove();
+                              is_pre_line_left = 0;
+                              is_pre_line_right = 0;
+                        }
                   }
+            } else if (mode == 2) {
+                  DefenceMove();
+            } else if (mode == 3) {
+                  motor.Free();
+            } else if (mode == 4) {
+                  motor.Run(0, 0);
             }
       }
 }
@@ -359,8 +351,8 @@ void DefenceMove() {
                   } else {
                         ball_almost_angle = -90;
                   }
-                  vector_x = abs(12 - sensors.line_interval) * MyCos(sensors.line_dir) + (12 - abs(12 - sensors.line_interval)) * MyCos(ball_almost_angle);
-                  vector_y = abs(12 - sensors.line_interval) * MySin(sensors.line_dir) + (12 - abs(12 - sensors.line_interval)) * MySin(ball_almost_angle);
+                  vector_x = (12 - sensors.line_interval) * MyCos(sensors.line_dir) + (12 - sensors.line_interval) * MyCos(ball_almost_angle);
+                  vector_y = (12 - sensors.line_interval) * MySin(sensors.line_dir) + (12 - sensors.line_interval) * MySin(ball_almost_angle);
 
                   if (sensors.line_dir > 90 && sensors.line_dir < 160 && camera.ball_dir < 0) {
                         motor.Run();
@@ -463,72 +455,67 @@ void Ui() {
                   printf("hello");
 
                   // 送信
-                  if (voltage.IsLowVoltage() == 1) {
-                        uiSerial.putc('E');
-                        uiSerial.putc('R');
-                  } else {
-                        uint8_t send_byte_num;
-                        uint8_t send_byte[25];
-                        send_byte[0] = 0xFF;
+                  uint8_t send_byte_num;
+                  uint8_t send_byte[25];
+                  send_byte[0] = 0xFF;
 
-                        if (item == 0) {
-                              int16_t debug_val_1 = line.encoder_val[0];
-                              int16_t debug_val_2 = line.encoder_val[1];
-                              int16_t debug_val_3 = line.encoder_val[3];
-                              int16_t debug_val_4 = line.encoder_val[2];
+                  if (item == 0) {
+                        int16_t debug_val_1 = line.encoder_val[0];
+                        int16_t debug_val_2 = line.encoder_val[1];
+                        int16_t debug_val_3 = line.encoder_val[3];
+                        int16_t debug_val_4 = line.encoder_val[2];
 
-                              send_byte_num = 10;
-                              send_byte[1] = uint8_t(voltage.Get() * 10);
-                              send_byte[2] = debug_val_1 > 0 ? debug_val_1 : 0;
-                              send_byte[3] = debug_val_1 < 0 ? debug_val_1 * -1 : 0;
-                              send_byte[4] = debug_val_2 > 0 ? debug_val_2 : 0;
-                              send_byte[5] = debug_val_2 < 0 ? debug_val_2 * -1 : 0;
-                              send_byte[6] = debug_val_3 > 0 ? debug_val_3 : 0;
-                              send_byte[7] = debug_val_3 < 0 ? debug_val_3 * -1 : 0;
-                              send_byte[8] = debug_val_4 > 0 ? debug_val_4 : 0;
-                              send_byte[9] = debug_val_4 < 0 ? debug_val_4 * -1 : 0;
-                              for (uint8_t i = 0; i < send_byte_num; i++) {
-                                    uiSerial.putc(send_byte[i]);
-                              }
-                        } else if (item == 1) {
-                              send_byte_num = 3;
-                              send_byte[1] = own_dir > 0 ? own_dir : 0;
-                              send_byte[2] = own_dir < 0 ? own_dir * -1 : 0;
-                              for (uint8_t i = 0; i < send_byte_num; i++) {
-                                    uiSerial.putc(send_byte[i]);
-                              }
-                        } else if (item == 2) {
-                              send_byte_num = 7;
-                              send_byte[1] = sensors.line_dir > 0 ? sensors.line_dir : 0;
-                              send_byte[2] = sensors.line_dir < 0 ? sensors.line_dir * -1 : 0;
-                              send_byte[3] = sensors.line_inside_dir > 0 ? sensors.line_inside_dir : 0;
-                              send_byte[4] = sensors.line_inside_dir < 0 ? sensors.line_inside_dir * -1 : 0;
-                              send_byte[5] = sensors.line_depth;
-                              send_byte[6] = sensors.line_white_qty;
-                              for (uint8_t i = 0; i < send_byte_num; i++) {
-                                    uiSerial.putc(send_byte[i]);
-                              }
-                        } else if (item == 3) {
-                              send_byte_num = 6;
-                              send_byte[1] = camera.ball_dir > 0 ? camera.ball_dir : 0;
-                              send_byte[2] = camera.ball_dir < 0 ? camera.ball_dir * -1 : 0;
-                              send_byte[3] = camera.ball_dis;
-                              send_byte[4] = sensors.hold_front;
-                              send_byte[5] = sensors.hold_back;
-                              for (uint8_t i = 0; i < send_byte_num; i++) {
-                                    uiSerial.putc(send_byte[i]);
-                              }
-                        } else if (item == 4) {
-                              send_byte_num = 7;
-                              send_byte[1] = camera.y_goal_dir > 0 ? camera.y_goal_dir : 0;
-                              send_byte[2] = camera.y_goal_dir < 0 ? camera.y_goal_dir * -1 : 0;
-                              send_byte[3] = camera.y_goal_size;
-                              send_byte[4] = camera.b_goal_dir > 0 ? camera.b_goal_dir : 0;
-                              send_byte[5] = camera.b_goal_dir < 0 ? camera.b_goal_dir * -1 : 0;
-                              send_byte[6] = camera.b_goal_size;
-                              for (uint8_t i = 0; i < send_byte_num; i++) {
-                                    uiSerial.putc(send_byte[i]);
-                              }
+                        send_byte_num = 10;
+                        send_byte[1] = uint8_t(voltage.Get() * 20);
+                        send_byte[2] = debug_val_1 > 0 ? debug_val_1 : 0;
+                        send_byte[3] = debug_val_1 < 0 ? debug_val_1 * -1 : 0;
+                        send_byte[4] = debug_val_2 > 0 ? debug_val_2 : 0;
+                        send_byte[5] = debug_val_2 < 0 ? debug_val_2 * -1 : 0;
+                        send_byte[6] = debug_val_3 > 0 ? debug_val_3 : 0;
+                        send_byte[7] = debug_val_3 < 0 ? debug_val_3 * -1 : 0;
+                        send_byte[8] = debug_val_4 > 0 ? debug_val_4 : 0;
+                        send_byte[9] = debug_val_4 < 0 ? debug_val_4 * -1 : 0;
+                        for (uint8_t i = 0; i < send_byte_num; i++) {
+                              uiSerial.putc(send_byte[i]);
+                        }
+                  } else if (item == 1) {
+                        send_byte_num = 3;
+                        send_byte[1] = own_dir > 0 ? own_dir : 0;
+                        send_byte[2] = own_dir < 0 ? own_dir * -1 : 0;
+                        for (uint8_t i = 0; i < send_byte_num; i++) {
+                              uiSerial.putc(send_byte[i]);
+                        }
+                  } else if (item == 2) {
+                        send_byte_num = 7;
+                        send_byte[1] = sensors.line_dir > 0 ? sensors.line_dir : 0;
+                        send_byte[2] = sensors.line_dir < 0 ? sensors.line_dir * -1 : 0;
+                        send_byte[3] = sensors.line_inside_dir > 0 ? sensors.line_inside_dir : 0;
+                        send_byte[4] = sensors.line_inside_dir < 0 ? sensors.line_inside_dir * -1 : 0;
+                        send_byte[5] = sensors.line_depth;
+                        send_byte[6] = sensors.line_white_qty;
+                        for (uint8_t i = 0; i < send_byte_num; i++) {
+                              uiSerial.putc(send_byte[i]);
+                        }
+                  } else if (item == 3) {
+                        send_byte_num = 6;
+                        send_byte[1] = camera.ball_dir > 0 ? camera.ball_dir : 0;
+                        send_byte[2] = camera.ball_dir < 0 ? camera.ball_dir * -1 : 0;
+                        send_byte[3] = camera.ball_dis;
+                        send_byte[4] = sensors.hold_front;
+                        send_byte[5] = sensors.hold_back;
+                        for (uint8_t i = 0; i < send_byte_num; i++) {
+                              uiSerial.putc(send_byte[i]);
+                        }
+                  } else if (item == 4) {
+                        send_byte_num = 7;
+                        send_byte[1] = camera.y_goal_dir > 0 ? camera.y_goal_dir : 0;
+                        send_byte[2] = camera.y_goal_dir < 0 ? camera.y_goal_dir * -1 : 0;
+                        send_byte[3] = camera.y_goal_size;
+                        send_byte[4] = camera.b_goal_dir > 0 ? camera.b_goal_dir : 0;
+                        send_byte[5] = camera.b_goal_dir < 0 ? camera.b_goal_dir * -1 : 0;
+                        send_byte[6] = camera.b_goal_size;
+                        for (uint8_t i = 0; i < send_byte_num; i++) {
+                              uiSerial.putc(send_byte[i]);
                         }
                   }
             }

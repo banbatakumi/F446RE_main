@@ -3,7 +3,7 @@
 
 #include "mbed.h"
 
-#define RC 0.9
+#define RC 0.5
 #define SAMPLE_CYCLE 0.5
 #define CHANGE_VOLTAGE 0.0002125037
 
@@ -12,14 +12,11 @@ class Voltage {
       Voltage(PinName battery_voltage_);
       void Read();
       float Get();
-      bool IsLowVoltage();
-      void SetLowVoltageTh(float low_voltage_th_ = 6.0);
 
      private:
       AnalogIn battery_voltage;
 
       float battery_voltage_val;
-      float low_voltage_th;
 
       Timer sampling_timer;
 };

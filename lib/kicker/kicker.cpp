@@ -18,7 +18,7 @@ void Kicker::SetPower(uint8_t power_) {
 void Kicker::Kick() {
       if (chargeTimer.read() > 0.5) {
             if (enable == 0) {
-                  ChargeTimeout.attach_us(mbed::callback(this, &Kicker::ChargeOff), power * 0.25);
+                  ChargeTimeout.attach_us(mbed::callback(this, &Kicker::ChargeOff), power * 0.5);
                   FlipTimeout.attach_us(mbed::callback(this, &Kicker::FlipOff), power);
                   sig_1 = 1;
                   sig_2 = 1;

@@ -18,19 +18,3 @@ void Voltage::Read() {
 float Voltage::Get() {
       return battery_voltage_val;
 }
-
-bool Voltage::IsLowVoltage() {
-      static uint16_t voltage_cnt;
-      bool is_low_voltage = 0;
-      if (battery_voltage_val < low_voltage_th) {
-            voltage_cnt++;
-      } else {
-            voltage_cnt = 0;
-      }
-      if (voltage_cnt >= 500) is_low_voltage = 1;
-      return is_low_voltage;
-}
-
-void Voltage::SetLowVoltageTh(float low_voltage_th_) {
-      this->low_voltage_th = low_voltage_th_;
-}
