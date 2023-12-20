@@ -79,13 +79,13 @@ int16_t Cam::GetBallY() {
 }
 
 int16_t Cam::GetOwnX() {
-      int16_t own_x = (200 - front_goal_size) * MySin(front_goal_dir) + (200 - back_goal_size) * MySin(back_goal_dir);
+      int16_t own_x = (200 - front_goal_size) * MySin(front_goal_dir + *own_dir) + (200 - back_goal_size) * MySin(back_goal_dir + *own_dir);
       own_x /= -2;
       return own_x;
 }
 
 int16_t Cam::GetOwnY() {
-      int16_t own_y = (200 - front_goal_size) * MyCos(front_goal_dir) + (200 - back_goal_size) * MyCos(back_goal_dir);
+      int16_t own_y = (200 - front_goal_size) * MyCos(front_goal_dir + *own_dir) + (200 - back_goal_size) * MyCos(back_goal_dir + *own_dir);
       own_y /= -2;
       return own_y;
 }
