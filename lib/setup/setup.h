@@ -64,8 +64,9 @@ Timer lineStopTimer;
 Timer goToCenterTimer;
 Timer frontHoldTimer;
 Timer backHoldTimer;
-Timer defenceShooTimer;
+Timer defenceShootTimer;
 Timer goToGoalTimer;
+Timer wrapTimer;
 typedef struct {
       int16_t ball_dir;
       int16_t inverse_ball_dir;
@@ -91,7 +92,7 @@ typedef struct {
       uint8_t encoder_val[4];
       uint8_t is_line_left;
       uint8_t is_line_right;
-      uint8_t line_white_qty;
+      uint8_t is_on_line;
       uint8_t line_interval;
       int16_t line_dir;
       int16_t line_inside_dir;

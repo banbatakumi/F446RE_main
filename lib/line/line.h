@@ -15,9 +15,9 @@ class Line {
       void LedOff();
       uint8_t GetDepth();
 
-      uint8_t is_left;
-      uint8_t is_right;
-      uint8_t white_qty;
+      bool is_left;
+      bool is_right;
+      bool is_on_line;
       uint8_t interval;
       int16_t dir;
       int16_t inside_dir;

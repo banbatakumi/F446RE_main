@@ -68,7 +68,10 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
       }
 
       static float add_power[MOTOR_QTY];
+      static int8_t pre_power[MOTOR_QTY];
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
+            if (abs(pre_power[i] - power[i]) > 25) add_power[i] = 0;
+            pre_power[i] = power[i];
             if (abs(power[i]) > 10 && addPowerTimer.read() < 0.1) {
                   if (encoder_val[i] < abs(power[i]) / encoder_gain) {
                         add_power[i] += abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 50 * addPowerTimer.read();

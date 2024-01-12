@@ -3,7 +3,7 @@
 #include "mbed.h"
 
 Kicker::Kicker(PinName sig_1_, PinName sig_2_) : sig_1(sig_1_), sig_2(sig_2_) {
-      sig_1 = 1;
+      sig_1 = 0;
       sig_2 = 0;
 
       chargeTimer.start();

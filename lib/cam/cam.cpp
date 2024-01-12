@@ -3,7 +3,7 @@
 #include "mbed.h"
 
 Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
-      serial.baud(230400);
+      serial.baud(115200);
       serial.attach(callback(this, &Cam::Receive), Serial::RxIrq);
 
       this->own_dir = own_dir_;
@@ -11,11 +11,8 @@ Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
 
 void Cam::Receive() {
       static uint8_t data_length;   // データの長さ
-      const uint8_t recv_data_num = 10;
+      const uint8_t recv_data_num = 7;
       static uint8_t recv_data[recv_data_num];
-      static uint8_t ball_dir_plus, ball_dir_minus;
-      static uint8_t yellow_goal_dir_plus, yellow_goal_dir_minus;
-      static uint8_t blue_goal_dir_plus, blue_goal_dir_minus;
 
       if (data_length == 0) {   // ヘッダ（C）の受信
             if (serial.getc() == 0xFF) {
@@ -25,21 +22,13 @@ void Cam::Receive() {
             }
       } else if (data_length == recv_data_num + 1) {
             if (serial.getc() == 0xAA) {
-                  ball_dir_plus = recv_data[0];
-                  ball_dir_minus = recv_data[1];
-                  ball_dis = recv_data[2];
-                  yellow_goal_dir_plus = recv_data[3];
-                  yellow_goal_dir_minus = recv_data[4];
-                  yellow_goal_size = recv_data[5];
-                  blue_goal_dir_plus = recv_data[6];
-                  blue_goal_dir_minus = recv_data[7];
-                  blue_goal_size = recv_data[8];
-                  is_goal_front = recv_data[9];
-
-                  // 受信データの合成
-                  ball_dir = ball_dir_plus == 0 ? ball_dir_minus * -1 : ball_dir_plus;
-                  yellow_goal_dir = yellow_goal_dir_plus == 0 ? yellow_goal_dir_minus * -1 : yellow_goal_dir_plus;
-                  blue_goal_dir = blue_goal_dir_plus == 0 ? blue_goal_dir_minus * -1 : blue_goal_dir_plus;
+                  ball_dir = recv_data[0] * 2 - 180;
+                  ball_dis = recv_data[1];
+                  yellow_goal_dir = recv_data[2] * 2 - 180;
+                  yellow_goal_size = recv_data[3];
+                  blue_goal_dir = recv_data[4] * 2 - 180;
+                  blue_goal_size = recv_data[5];
+                  is_goal_front = recv_data[6];
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
                   if (abs(SimplifyDeg(yellow_goal_dir - *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir - *own_dir)) >= 90) {
@@ -69,12 +58,12 @@ void Cam::Receive() {
 }
 
 int16_t Cam::GetBallX() {
-      int16_t ball_x = (200 - ball_dis) * MySin(ball_dir);
+      int16_t ball_x = (100 - ball_dis) * MySin(ball_dir);
       return ball_x;
 }
 
 int16_t Cam::GetBallY() {
-      int16_t ball_y = (200 - ball_dis) * MyCos(ball_dir);
+      int16_t ball_y = (100 - ball_dis) * MyCos(ball_dir);
       return ball_y;
 }
 
