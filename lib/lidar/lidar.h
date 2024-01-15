@@ -20,7 +20,7 @@ class Lidar {
       uint8_t val[TOF_QTY];
 
      private:
-      RawSerial serial;
+      UnbufferedSerial serial;
 
       float unit_vector_x[TOF_QTY];
       float unit_vector_y[TOF_QTY];

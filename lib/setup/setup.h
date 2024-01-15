@@ -31,7 +31,7 @@ uint8_t line_moving_speed;
 int16_t own_dir;
 
 // UART通信定義 (TX, RX)
-RawSerial uiSerial(PC_10, PC_11);
+UnbufferedSerial uiSerial(PC_10, PC_11);
 
 void Ui();
 
@@ -43,7 +43,7 @@ void GetSensors();
 
 PID wrapDirPID;
 
-PID defencePID;
+PID defensePID;
 
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8, &own_dir);
@@ -64,7 +64,7 @@ Timer lineStopTimer;
 Timer goToCenterTimer;
 Timer frontHoldTimer;
 Timer backHoldTimer;
-Timer defenceShootTimer;
+Timer defenseShootTimer;
 Timer goToGoalTimer;
 Timer wrapTimer;
 typedef struct {

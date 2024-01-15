@@ -4,7 +4,7 @@
 
 Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
       serial.baud(115200);
-      serial.attach(callback(this, &Cam::Receive), Serial::RxIrq);
+      serial.attach(callback(this, &Cam::Receive), SerialBase::RxIrq);
 
       this->own_dir = own_dir_;
 }
@@ -13,15 +13,17 @@ void Cam::Receive() {
       static uint8_t data_length;   // データの長さ
       const uint8_t recv_data_num = 7;
       static uint8_t recv_data[recv_data_num];
+      uint8_t read_byte;
+      serial.read(&read_byte, 1);
 
       if (data_length == 0) {   // ヘッダ（C）の受信
-            if (serial.getc() == 0xFF) {
+            if (read_byte == 0xFF) {
                   data_length++;
             } else {
                   data_length = 0;
             }
       } else if (data_length == recv_data_num + 1) {
-            if (serial.getc() == 0xAA) {
+            if (read_byte == 0xAA) {
                   ball_dir = recv_data[0] * 2 - 180;
                   ball_dis = recv_data[1];
                   yellow_goal_dir = recv_data[2] * 2 - 180;
@@ -52,7 +54,7 @@ void Cam::Receive() {
 
             data_length = 0;
       } else {
-            recv_data[data_length - 1] = serial.getc();
+            recv_data[data_length - 1] = read_byte;
             data_length++;
       }
 }

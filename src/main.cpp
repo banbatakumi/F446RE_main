@@ -24,10 +24,10 @@ void setup() {
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PID_TYPE);
 
-      defencePID.SetGain(5, 1, 2.5);
-      defencePID.SetSamplingPeriod(0.01);
-      defencePID.SetLimit(100);
-      defencePID.SelectType(PID_TYPE);
+      defensePID.SetGain(5, 1, 2.5);
+      defensePID.SetSamplingPeriod(0.01);
+      defensePID.SetLimit(100);
+      defensePID.SelectType(PID_TYPE);
 
       // キッカー
       kicker.SetPower(100);   // 250まで
@@ -48,7 +48,7 @@ int main() {
 
             GetSensors();
             // lidar.Receive();
-            if (uiSerial.readable()) Ui();
+            if(uiSerial.readable())Ui();
 
             if (mode == 0) {
                   motor.Free();
@@ -176,7 +176,7 @@ int main() {
             } else if (mode == 3) {
                   motor.Free();
             } else if (mode == 4) {
-                  motor.Run(0,25);
+                  motor.Run();
             }
       }
 }
@@ -331,9 +331,9 @@ void DefenceMove() {
             dribblerFront.Hold(0);
       }
 
-      if (defenceShootTimer.read() > 2) {
-            if (defenceShootTimer.read() < 3 && (abs(camera.ball_dir) < 45 || sensors.hold_front == 1)) {
-                  if (defenceShootTimer.read() > 2.1) {
+      if (defenseShootTimer.read() > 2) {
+            if (defenseShootTimer.read() < 3 && (abs(camera.ball_dir) < 45 || sensors.hold_front == 1)) {
+                  if (defenseShootTimer.read() > 2.1) {
                         if (sensors.is_line_left == 1) {
                               motor.Run(-90, line_moving_speed);
                         } else if (sensors.is_line_right == 1) {
@@ -344,18 +344,18 @@ void DefenceMove() {
                   } else {
                         motor.Run(camera.ball_dir, moving_speed, camera.front_goal_dir + own_dir, FRONT);
                   }
-                  if (sensors.hold_front == 1 && defenceShootTimer.read() > 2.5) kicker.Kick();
+                  if (sensors.hold_front == 1 && defenseShootTimer.read() > 2.5) kicker.Kick();
             } else {
-                  defenceShootTimer.reset();
-                  defenceShootTimer.stop();
+                  defenseShootTimer.reset();
+                  defenseShootTimer.stop();
             }
       } else {
             if (sensors.is_on_line == 1) {
                   if ((abs(camera.ball_dir) < 30 && camera.ball_dis > 25) || sensors.hold_front == 1) {
-                        defenceShootTimer.start();
+                        defenseShootTimer.start();
                   } else {
-                        defenceShootTimer.reset();
-                        defenceShootTimer.stop();
+                        defenseShootTimer.reset();
+                        defenseShootTimer.stop();
                   }
 
                   int16_t vector_x, vector_y;
@@ -381,13 +381,13 @@ void DefenceMove() {
                   } else if (sensors.line_dir < -90 && sensors.line_dir > -135 && camera.ball_dir > 0) {
                         motor.Run();
                   } else {
-                        defencePID.Compute(camera.ball_x, 0);
+                        defensePID.Compute(camera.ball_x, 0);
 
-                        motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, abs(defencePID.Get()));
+                        motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, abs(defensePID.Get()));
                   }
             } else {
-                  defenceShootTimer.reset();
-                  defenceShootTimer.stop();
+                  defenseShootTimer.reset();
+                  defenseShootTimer.stop();
 
                   if (camera.back_goal_size > 70) {
                         motor.Run(0, moving_speed);
@@ -452,15 +452,17 @@ void Ui() {
       static uint8_t data_length;
       const uint8_t recv_data_num = 6;
       static uint8_t recv_data[recv_data_num];
+      uint8_t read_byte;
+      uiSerial.read(&read_byte, 1);
 
       if (data_length == 0) {
-            if (uiSerial.getc() == 0xFF) {
+            if (read_byte == 0xFF) {
                   data_length++;
             } else {
                   data_length = 0;
             }
       } else if (data_length == recv_data_num + 1) {
-            if (uiSerial.getc() == 0xAA) {
+            if (read_byte == 0xAA) {
                   item = recv_data[0] - 127;
                   mode = recv_data[1];
                   is_own_dir_correction = recv_data[2];
@@ -477,7 +479,7 @@ void Ui() {
                   }
 
                   // 送信
-                  uint8_t send_byte_num;
+                  uint8_t send_byte_num = 0;
                   uint8_t send_byte[25];
                   send_byte[0] = 0xFF;
 
@@ -487,54 +489,40 @@ void Ui() {
                         uint8_t debug_val_3 = line.is_on_line;
                         uint8_t debug_val_4 = line.encoder_val[3];
 
-                        send_byte_num = 8;
+                        send_byte_num = 7;
                         send_byte[1] = uint8_t(voltage.Get() * 20);
                         send_byte[2] = debug_val_1 > 0 ? debug_val_1 : 0;
                         send_byte[3] = debug_val_1 < 0 ? debug_val_1 * -1 : 0;
                         send_byte[4] = debug_val_2;
                         send_byte[5] = debug_val_3;
                         send_byte[6] = debug_val_4;
-                        for (uint8_t i = 0; i < send_byte_num; i++) {
-                              uiSerial.putc(send_byte[i]);
-                        }
                   } else if (item == 1) {
                         send_byte_num = 3;
                         send_byte[1] = own_dir > 0 ? own_dir : 0;
                         send_byte[2] = own_dir < 0 ? own_dir * -1 : 0;
-                        for (uint8_t i = 0; i < send_byte_num; i++) {
-                              uiSerial.putc(send_byte[i]);
-                        }
                   } else if (item == 2) {
                         send_byte_num = 5;
                         send_byte[1] = sensors.line_dir / 2 + 90;
                         send_byte[2] = sensors.line_inside_dir / 2 + 90;
                         send_byte[3] = sensors.line_interval;
                         send_byte[4] = sensors.is_on_line << 2 | sensors.is_line_left << 1 | sensors.is_line_right;
-                        for (uint8_t i = 0; i < send_byte_num; i++) {
-                              uiSerial.putc(send_byte[i]);
-                        }
                   } else if (item == 3) {
                         send_byte_num = 4;
                         send_byte[1] = camera.ball_dir / 2 + 90;
                         send_byte[2] = camera.ball_dis;
                         send_byte[3] = sensors.hold_front << 1 | sensors.hold_back;
-                        for (uint8_t i = 0; i < send_byte_num; i++) {
-                              uiSerial.putc(send_byte[i]);
-                        }
                   } else if (item == 4) {
                         send_byte_num = 5;
                         send_byte[1] = camera.y_goal_dir / 2 + 90;
                         send_byte[2] = camera.y_goal_size;
                         send_byte[3] = camera.b_goal_dir / 2 + 90;
                         send_byte[4] = camera.b_goal_size;
-                        for (uint8_t i = 0; i < send_byte_num; i++) {
-                              uiSerial.putc(send_byte[i]);
-                        }
                   }
+                  uiSerial.write(&send_byte, send_byte_num);
             }
             data_length = 0;
       } else {
-            recv_data[data_length - 1] = uiSerial.getc();
+            recv_data[data_length - 1] = read_byte;
             data_length++;
       }
 

@@ -12,7 +12,7 @@ class Imu {
       void SetZero();
 
      private:
-      RawSerial serial;
+      UnbufferedSerial serial;
       void Receive();
 
       int16_t dir;

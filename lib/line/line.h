@@ -24,7 +24,7 @@ class Line {
       uint8_t encoder_val[4];
 
      private:
-      RawSerial serial;
+      UnbufferedSerial serial;
       void Receive();
 
       bool do_led_on;

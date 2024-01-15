@@ -36,7 +36,7 @@ class Cam {
       bool is_goal_front;
 
      private:
-      RawSerial serial;
+      UnbufferedSerial serial;
       void Receive();
 
       int16_t* own_dir;
