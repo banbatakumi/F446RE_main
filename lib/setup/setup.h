@@ -14,10 +14,10 @@
 #include "simplify_deg.h"
 #include "voltage.h"
 
-#define PI 3.1415926535   // 円周率
+#define PI 3.1415926535  // 円周率
 
-#define CUT_VOLTAGE 4.0   // 全機能強制終了する電圧
-#define VOLTAGE_CNT_NUM 1200   // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
+#define CUT_VOLTAGE 4.0       // 全機能強制終了する電圧
+#define VOLTAGE_CNT_NUM 1200  // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define UI_UART_SPEED 9600
@@ -37,7 +37,6 @@ void Ui();
 
 void OffenceMove();
 void DefenceMove();
-void GoToCenter();
 
 void GetSensors();
 
@@ -52,7 +51,7 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Lidar lidar(PC_12, PD_2, 115200);   // TX, RX
+Lidar lidar(PC_12, PD_2, 115200);  // TX, RX
 Cam cam(PA_0, PA_1, &own_dir);
 Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3);

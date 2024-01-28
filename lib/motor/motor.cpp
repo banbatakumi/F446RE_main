@@ -2,7 +2,8 @@
 
 #include "mbed.h"
 
-Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t* own_dir_) : motor_1_a(motor_1_a_), motor_1_b(motor_1_b_), motor_2_a(motor_2_a_), motor_2_b(motor_2_b_), motor_3_a(motor_3_a_), motor_3_b(motor_3_b_), motor_4_a(motor_4_a_), motor_4_b(motor_4_b_) {
+Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t *own_dir_)
+    : motor_1_a(motor_1_a_), motor_1_b(motor_1_b_), motor_2_a(motor_2_a_), motor_2_b(motor_2_b_), motor_3_a(motor_3_a_), motor_3_b(motor_3_b_), motor_4_a(motor_4_a_), motor_4_b(motor_4_b_) {
       motor_1_a = 0;
       motor_1_b = 0;
       motor_2_a = 0;
@@ -25,59 +26,29 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
       if (moving_speed > power_max_limit) moving_speed = power_max_limit;
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);   // 角度とスピードを各モーターの値に変更
+            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);  // 角度とスピードを各モーターの値に変更
       }
 
       // モーターの最大パフォーマンス発揮
       uint8_t max_power = 0;
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (max_power < abs(power[i])) {
-                  max_power = abs(power[i]);
-            }
+            if (max_power < abs(power[i])) max_power = abs(power[i]);
       }
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             power[i] *= float(moving_speed) / max_power;
       }
 
-      // PID姿勢制御
-      attitudeControlPID.Compute(*own_dir, robot_angle_);
-      attitudeControlPID.SetLimit(pid_limit_);
-      float tmp_pid = attitudeControlPID.Get();
-
-      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
-            if (robot_angle_mode_ == 0) {
-                  power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
-            } else if (robot_angle_mode_ == 1) {   // ボールを前に捕捉した状態
-                  if (i == 1 || i == 2) {
-                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
-                  }
-            } else if (robot_angle_mode_ == 2) {   // ボールを右に捕捉した状態
-                  if (i == 2 || i == 3) {
-                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
-                  }
-            } else if (robot_angle_mode_ == 3) {   // ボールを後ろに捕捉した状態
-                  if (i == 0 || i == 3) {
-                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
-                  }
-            } else if (robot_angle_mode_ == 4) {   // ボールを左に捕捉した状態
-                  if (i == 0 || i == 1) {
-                        power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
-                  }
-            }
-      }
-
       static float add_power[MOTOR_QTY];
       static int8_t pre_power[MOTOR_QTY];
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (abs(pre_power[i] - power[i]) > 25) add_power[i] = 0;
+            if (abs(pre_power[i] - power[i]) > 50) add_power[i] = 0;
             pre_power[i] = power[i];
             if (abs(power[i]) > 10 && addPowerTimer.read() < 0.1) {
                   if (encoder_val[i] < abs(power[i]) / encoder_gain) {
-                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 50 * addPowerTimer.read();
+                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 75 * addPowerTimer.read();
                         if (add_power[i] > 50) add_power[i] = 50;
                   } else {
-                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 50 * addPowerTimer.read();
+                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 75 * addPowerTimer.read();
                         if (add_power[i] < 0) add_power[i] = 0;
                   }
             } else {
@@ -93,10 +64,28 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             }
       }
 
+       // PID姿勢制御
+      attitudeControlPID.Compute(*own_dir, robot_angle_);
+      attitudeControlPID.SetLimit(pid_limit_);
+      float tmp_pid = attitudeControlPID.Get();
+
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (power[i] > power_max_limit) {
-                  power[i] = power_max_limit * (abs(power[i]) / power[i]);
+            // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
+            if (robot_angle_mode_ == 0) {
+                  power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
+            } else if (robot_angle_mode_ == 1) {  // ボールを前に捕捉した状態
+                  if (i == 1 || i == 2) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+            } else if (robot_angle_mode_ == 2) {  // ボールを右に捕捉した状態
+                  if (i == 2 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+            } else if (robot_angle_mode_ == 3) {  // ボールを後ろに捕捉した状態
+                  if (i == 0 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+            } else if (robot_angle_mode_ == 4) {  // ボールを左に捕捉した状態
+                  if (i == 0 || i == 1) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
             }
+      }
+
+      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
+            if (power[i] > power_max_limit) power[i] = power_max_limit * (abs(power[i]) / power[i]);
       }
 
       // 移動平均フィルタ

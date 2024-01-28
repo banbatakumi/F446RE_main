@@ -7,19 +7,19 @@ void setup() {
       // uiSerial.attach(&Ui, Serial::RxIrq);
 
       // モーター
-      motor.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
-      motor.SetAttitudeControlPID(1, 0.5, 0.1);   // デフォルトゲイン：(1, 0.5, 0.1)
-      motor.SetMovingAveLength(15);
+      motor.SetPwmPeriod(20);                    // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      motor.SetAttitudeControlPID(1, 0.5, 0.1);  // デフォルトゲイン：(1, 0.5, 0.1)
+      motor.SetMovingAveLength(25);
       motor.SetPowerMaxLimit(100);
-      motor.SetPowerMinLimit(2);
-      motor.SetEncoderGain(6.5);
+      motor.SetPowerMinLimit(5);
+      motor.SetEncoderGain(10);
 
       // ドリブラー
-      dribblerFront.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      dribblerFront.SetPwmPeriod(20);  // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
       dribblerBack.SetPwmPeriod(20);   // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
 
       // 回り込みPID
-      wrapDirPID.SetGain(2, 0, 1.5);
+      wrapDirPID.SetGain(1.5, 0, 2.5);
       wrapDirPID.SetSamplingPeriod(0.01);
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PID_TYPE);
@@ -30,7 +30,7 @@ void setup() {
       defensePID.SelectType(PID_TYPE);
 
       // キッカー
-      kicker.SetPower(100);   // 250まで
+      kicker.SetPower(100);  // 250まで
 
       holdFront.SetTh();
       holdBack.SetTh();
@@ -48,7 +48,7 @@ int main() {
 
             GetSensors();
             // lidar.Receive();
-            if(uiSerial.readable())Ui();
+            if (uiSerial.readable()) Ui();
 
             if (mode == 0) {
                   motor.Free();
@@ -56,7 +56,7 @@ int main() {
                   static bool is_pre_line_left = 0;
                   static bool is_pre_line_right = 0;
                   static bool is_pre_line = 0;
-                  if (sensors.is_on_line == 1 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {   // ラインセンサの処理
+                  if (sensors.is_on_line == 1 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {  // ラインセンサの処理
                         if (abs(camera.ball_dir) < 45 && camera.ball_dis > 75) {
                               dribblerFront.Hold(100);
                         } else {
@@ -138,7 +138,7 @@ int main() {
                                     }
                               }
                         }
-                  } else if (camera.ball_dis == 0) {   // ボールがない時の処理
+                  } else if (camera.ball_dis == 0) {  // ボールがない時の処理
                         goToCenterTimer.start();
                         if (goToCenterTimer.read_ms() > 1000) {
                               motor.Run(camera.center_dir, camera.center_dis * 5);
@@ -175,14 +175,12 @@ int main() {
                   DefenceMove();
             } else if (mode == 3) {
                   motor.Free();
-            } else if (mode == 4) {
-                  motor.Run();
             }
       }
 }
 
 void OffenceMove() {
-      if (curveShootTimer.read() > 0) {   // 後ろドリブラーのマカオシュート
+      if (curveShootTimer.read() > 0) {  // 後ろドリブラーのマカオシュート
             static int8_t shoot_dir;
 
             dribblerBack.Hold(100);
@@ -201,8 +199,8 @@ void OffenceMove() {
                   curveShootTimer.stop();
                   curveShootTimer.reset();
             }
-      } else if (holdFront.IsHold()) {   // 前に捕捉している時
-            if (camera.front_goal_size > 20 && camera.is_goal_front == 1) {   // キッカーを打つ条件
+      } else if (holdFront.IsHold()) {                                       // 前に捕捉している時
+            if (camera.front_goal_size > 20 && camera.is_goal_front == 1) {  // キッカーを打つ条件
                   kicker.Kick();
                   dribblerFront.Brake();
                   motor.Run(0, moving_speed);
@@ -228,8 +226,8 @@ void OffenceMove() {
                         motor.Run(tmp_move_dir - own_dir, 20, robot_dir, FRONT, 25);
                   }
             }
-            //} else if (holdBack.IsHold()) {   // 後ろに捕捉している時
-            //      curveShootTimer.start();
+      } else if (holdBack.IsHold()) {  // 後ろに捕捉している時
+            curveShootTimer.start();
       } else {
             if (abs(camera.ball_dir) < 45 && camera.ball_dis > 75) {
                   frontHoldTimer.start();
@@ -257,18 +255,18 @@ void OffenceMove() {
                   }
             }
 
-            if (abs(camera.ball_dir) < 180) {   // 前の捕捉エリアに回り込む
+            if (abs(camera.ball_dir) < 135) {  // 前の捕捉エリアに回り込む
                   int16_t tmp_move_speed, tmp_move_angle;
 
                   int16_t wrap_deg_addend;
 
                   // 角度
-                  if (abs(camera.ball_dir) < 45) {
-                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 22.500);
+                  if (abs(camera.ball_dir) < 30) {
+                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10.000);
                   } else {
                         wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
                   }
-                  tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 90.000), 2));
+                  tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 100.000), 2.5));
 
                   if (abs(camera.ball_dir) < 10) wrapTimer.start();
                   if (abs(camera.ball_dir) > 45) {
@@ -282,7 +280,7 @@ void OffenceMove() {
                   if (camera.ball_dis < 80) {
                         tmp_move_speed = moving_speed;
                   } else if (wrapTimer.read() > 0.5) {
-                        tmp_move_speed = 40;
+                        tmp_move_speed = 25;
                   } else {
                         tmp_move_speed = abs(wrapDirPID.Get());
                   }
@@ -290,7 +288,7 @@ void OffenceMove() {
                   if (tmp_move_speed > moving_speed) tmp_move_speed = moving_speed;
 
                   motor.Run(tmp_move_angle, tmp_move_speed);
-            } else {   // 後ろの捕捉エリアに回り込む
+            } else {  // 後ろの捕捉エリアに回り込む
                   int16_t tmp_move_speed, tmp_move_angle;
 
                   uint8_t wrap_speed_addend;
@@ -318,7 +316,7 @@ void OffenceMove() {
 
                   if (tmp_move_speed > 50) tmp_move_speed = 50;
 
-                  tmp_move_angle = SimplifyDeg(tmp_move_angle - 180);   // ０度の時に180度に動くように変換
+                  tmp_move_angle = SimplifyDeg(tmp_move_angle - 180);  // ０度の時に180度に動くように変換
                   motor.Run(tmp_move_angle, tmp_move_speed);
             }
       }
@@ -398,9 +396,6 @@ void DefenceMove() {
                   }
             }
       }
-}
-
-void GoToCenter() {
 }
 
 void GetSensors() {
@@ -484,9 +479,9 @@ void Ui() {
                   send_byte[0] = 0xFF;
 
                   if (item == 0) {
-                        int16_t debug_val_1 = line.is_left;
-                        int16_t debug_val_2 = line.is_right;
-                        uint8_t debug_val_3 = line.is_on_line;
+                        int16_t debug_val_1 = line.encoder_val[0];
+                        int16_t debug_val_2 = line.encoder_val[1];
+                        uint8_t debug_val_3 = line.encoder_val[2];
                         uint8_t debug_val_4 = line.encoder_val[3];
 
                         send_byte_num = 7;

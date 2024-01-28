@@ -12,7 +12,7 @@ Kicker::Kicker(PinName sig_1_, PinName sig_2_) : sig_1(sig_1_), sig_2(sig_2_) {
 void Kicker::SetPower(uint8_t power_) {
       this->power = power_ * 1000;
 
-      if (power > 250000) power = 250000;
+      if (power > 200000) power = 200000;
 }
 
 void Kicker::Kick() {
