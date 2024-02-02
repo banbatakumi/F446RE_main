@@ -6,12 +6,12 @@
 #include "hold.h"
 #include "imu.h"
 #include "kicker.h"
-#include "lidar.h"
 #include "line.h"
 #include "mbed.h"
 #include "motor.h"
 #include "pid.h"
 #include "simplify_deg.h"
+#include "ultrasonic.h"
 #include "voltage.h"
 
 #define PI 3.1415926535  // 円周率
@@ -51,7 +51,7 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Lidar lidar(PC_12, PD_2, 115200);  // TX, RX
+Ultrasonic ultrasonic(PC_12, PD_2, 115200);  // TX, RX
 Cam cam(PA_0, PA_1, &own_dir);
 Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3);
@@ -61,8 +61,6 @@ DigitalOut led[2] = {PA_5, PA_6};
 Timer curveShootTimer;
 Timer lineStopTimer;
 Timer goToCenterTimer;
-Timer frontHoldTimer;
-Timer backHoldTimer;
 Timer defenseShootTimer;
 Timer goToGoalTimer;
 Timer wrapTimer;
@@ -88,6 +86,7 @@ typedef struct {
 } type_camera;
 
 typedef struct {
+      uint8_t dis[4];
       uint8_t encoder_val[4];
       uint8_t is_line_left;
       uint8_t is_line_right;

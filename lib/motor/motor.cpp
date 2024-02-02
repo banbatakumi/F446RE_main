@@ -64,7 +64,7 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             }
       }
 
-       // PID姿勢制御
+      // PID姿勢制御
       attitudeControlPID.Compute(*own_dir, robot_angle_);
       attitudeControlPID.SetLimit(pid_limit_);
       float tmp_pid = attitudeControlPID.Get();
@@ -74,13 +74,13 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             if (robot_angle_mode_ == 0) {
                   power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
             } else if (robot_angle_mode_ == 1) {  // ボールを前に捕捉した状態
-                  if (i == 1 || i == 2) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+                  if (i == 1 || i == 2) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
             } else if (robot_angle_mode_ == 2) {  // ボールを右に捕捉した状態
-                  if (i == 2 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+                  if (i == 2 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
             } else if (robot_angle_mode_ == 3) {  // ボールを後ろに捕捉した状態
-                  if (i == 0 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+                  if (i == 0 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
             } else if (robot_angle_mode_ == 4) {  // ボールを左に捕捉した状態
-                  if (i == 0 || i == 1) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 1;
+                  if (i == 0 || i == 1) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
             }
       }
 

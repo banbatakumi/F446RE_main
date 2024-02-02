@@ -3,9 +3,6 @@
 
 #include "mbed.h"
 #include "moving_ave.h"
-
-#define MOTOR_FREQUENCY 30000   // モーターのPWM周波数
-
 class Dribbler {
      public:
       Dribbler(PinName motor_a_, PinName motor_b_);
