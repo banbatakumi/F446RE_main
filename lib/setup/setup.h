@@ -88,6 +88,8 @@ typedef struct {
 typedef struct {
       uint8_t dis[4];
       uint8_t encoder_val[4];
+      int16_t ir_dir;
+      uint8_t ir_dis;
       uint8_t is_line_left;
       uint8_t is_line_right;
       uint8_t is_on_line;

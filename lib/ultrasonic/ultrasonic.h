@@ -11,11 +11,17 @@ class Ultrasonic {
       Ultrasonic(PinName tx_, PinName rx_, uint32_t serial_baud_);
 
       void Receive();
+      void IrLedOn();
+      void IrLedOff();
 
       uint8_t val[SENSOR_QTY];
+      int16_t ir_dir;
+      int16_t ir_dis;
 
      private:
       UnbufferedSerial serial;
+
+      bool do_ir_led_on;
 };
 
 #endif

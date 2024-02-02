@@ -4,7 +4,7 @@
 #include "mbed.h"
 #include "simplify_deg.h"
 
-#define PI 3.1415926535   // 円周率
+#define PI 3.1415926535  // 円周率
 
 class Line {
      public:
