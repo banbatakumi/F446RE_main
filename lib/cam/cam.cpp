@@ -10,13 +10,13 @@ Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
 }
 
 void Cam::Receive() {
-      static uint8_t data_length;   // データの長さ
+      static uint8_t data_length;  // データの長さ
       const uint8_t recv_data_num = 7;
       static uint8_t recv_data[recv_data_num];
       uint8_t read_byte;
       serial.read(&read_byte, 1);
 
-      if (data_length == 0) {   // ヘッダ（C）の受信
+      if (data_length == 0) {  // ヘッダ（C）の受信
             if (read_byte == 0xFF) {
                   data_length++;
             } else {
@@ -31,6 +31,16 @@ void Cam::Receive() {
                   blue_goal_dir = recv_data[4] * 2 - 180;
                   blue_goal_size = recv_data[5];
                   is_goal_front = recv_data[6];
+                  if (recv_data[6] == 1) {
+                        if (goal_front_count > 15) {
+                              is_goal_front = 1;
+                        } else {
+                              goal_front_count++;
+                        }
+                  } else {
+                        goal_front_count = 0;
+                        is_goal_front = 0;
+                  }
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
                   if (abs(SimplifyDeg(yellow_goal_dir - *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir - *own_dir)) >= 90) {
@@ -39,12 +49,12 @@ void Cam::Receive() {
                         is_front_goal_yellow = 0;
                   }
 
-                  if (is_front_goal_yellow == 1) {   // 自ゴール青
+                  if (is_front_goal_yellow == 1) {  // 自ゴール青
                         front_goal_dir = yellow_goal_dir;
                         front_goal_size = yellow_goal_size;
                         back_goal_dir = blue_goal_dir;
                         back_goal_size = blue_goal_size;
-                  } else {   // 自ゴール黄
+                  } else {  // 自ゴール黄
                         front_goal_dir = blue_goal_dir;
                         front_goal_size = blue_goal_size;
                         back_goal_dir = yellow_goal_dir;

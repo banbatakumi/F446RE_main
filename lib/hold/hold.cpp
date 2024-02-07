@@ -17,7 +17,7 @@ uint8_t Hold::GetVal() {
 
 bool Hold::IsHold() {
       bool is_catch = 0;
-      if (rc_val < th) is_catch = 1;   // キャッチしたかの判定
+      if (rc_val < th) is_catch = 1;  // キャッチしたかの判定
 
       return is_catch;
 }
@@ -29,5 +29,5 @@ void Hold::SetTh() {
             th += rc_val;
       }
       th /= SET_TH_NUM;
-      th -= 10;
+      th -= 15;
 }

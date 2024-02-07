@@ -5,7 +5,7 @@
 #include "simplify_deg.h"
 #include "sin_cos_table.h"
 
-#define PI 3.1415926535   // 円周率
+#define PI 3.1415926535  // 円周率
 
 class Cam {
      public:
@@ -43,6 +43,7 @@ class Cam {
       int16_t* mode;
 
       bool is_front_goal_yellow;
+      uint8_t goal_front_count;
 };
 
 #endif

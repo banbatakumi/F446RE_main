@@ -16,11 +16,11 @@
 
 #define PI 3.1415926535  // 円周率
 
-#define CUT_VOLTAGE 4.0       // 全機能強制終了する電圧
-#define VOLTAGE_CNT_NUM 1200  // CUT_VOLTAGE以下にこの定義回数が続いたら強制終了
-
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
 #define UI_UART_SPEED 9600
+
+#define HOLD_MAX_POWER 100
+#define HOLD_WAIT_POWER 90
 
 // グローバル変数定義
 uint8_t mode = 0;
@@ -58,7 +58,8 @@ Line line(PA_2, PA_3);
 
 DigitalOut led[2] = {PA_5, PA_6};
 
-Timer curveShootTimer;
+Timer FrontCurveShootTimer;
+Timer BackCurveShootTimer;
 Timer lineStopTimer;
 Timer goToCenterTimer;
 Timer defenseShootTimer;

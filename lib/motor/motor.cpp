@@ -18,10 +18,25 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       addPowerTimer.start();
 }
 
-void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
-      int16_t power[MOTOR_QTY];
+void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, float acceleration_time_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
+      static uint8_t pre_moving_speed;
       uint8_t moving_speed = moving_speed_;
       int16_t moving_dir = SimplifyDeg(moving_dir_);
+      int16_t power[MOTOR_QTY];
+
+      // 加速
+      if (accelerationTimer.read() <= acceleration_time_) {
+            moving_speed *= (1.000 / acceleration_time_) * accelerationTimer.read();
+      } else {
+            accelerationTimer.stop();
+      }
+      if (acceleration_time_ == 0 || pre_moving_speed != moving_speed_) {
+            accelerationTimer.reset();
+            accelerationTimer.stop();
+      } else {
+            accelerationTimer.start();
+      }
+      pre_moving_speed = moving_speed_;
 
       if (moving_speed > power_max_limit) moving_speed = power_max_limit;
 
