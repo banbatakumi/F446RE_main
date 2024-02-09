@@ -30,9 +30,11 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
 
       if (moving_speed > POWER_MAX_LIMIT) moving_speed = POWER_MAX_LIMIT;  // 指定速度が限界を超えていたときに補正
 
-      for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);  // 角度とスピードを各モーターの値に変更
-      }
+      // 角度とスピードを各モーターの値に変更
+      power[0] = MySin(moving_dir - MOTOR_0_DEGREE) * moving_speed * -1;
+      power[1] = MySin(moving_dir - MOTOR_1_DEGREE) * moving_speed * -1;
+      power[2] = MySin(moving_dir - MOTOR_2_DEGREE) * moving_speed * 1;
+      power[3] = MySin(moving_dir - MOTOR_3_DEGREE) * moving_speed * 1;
 
       // モーターの最大パフォーマンス発揮
       uint8_t max_power = 0;
@@ -43,6 +45,7 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             power[i] *= float(moving_speed) / max_power;
       }
 
+      // エンコーダー処理
       static float add_power[MOTOR_QTY];
       static int16_t corrected_power[MOTOR_QTY];
       static int16_t pre_corrected_power[MOTOR_QTY];
@@ -53,16 +56,16 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
             if (abs(pre_corrected_power[i] - corrected_power[i]) > 50) add_power[i] = 0;  // 急に速度が変わった場合は積分をリセット
             pre_corrected_power[i] = corrected_power[i];
 
-            if (abs(power[i]) >= 10 && addPowerTimer.read() < 0.1) {
+            if (abs(power[i]) >= 10 && readms(addPowerTimer) < 100) {
                   d = abs(encoder_val[i] - abs(corrected_power[i]) / (100.000 / BASE_POWER));  // 指定速度と実際の速度の差
                   if (encoder_val[i] < abs(corrected_power[i]) / (100.000 / BASE_POWER)) {
-                        add_power[i] += (d + pre_d) * addPowerTimer.read() / 2 * ENCODER_GAIN;  // 台形積分
+                        add_power[i] += (d + pre_d) * readus(addPowerTimer) / 2 * ENCODER_GAIN;  // 台形積分
                         add_power_limit = POWER_MAX_LIMIT - abs(power[i]);
                         if (add_power_limit > MAX_ADD_POWER) add_power_limit = MAX_ADD_POWER;  // 加算する速度が上がりすぎないように補正
                         if (add_power[i] > add_power_limit) add_power[i] = add_power_limit;    // 加算後の速度が100を超えないように補正
                   } else {
-                        add_power[i] -= (d + pre_d) * addPowerTimer.read() / 2 * ENCODER_GAIN;  // 台形積分
-                        if (add_power[i] < MIN_ADD_POWER) add_power[i] = MIN_ADD_POWER;         // 加算する速度が下がりすぎないように補正
+                        add_power[i] -= (d + pre_d) * readus(addPowerTimer) / 2 * ENCODER_GAIN;  // 台形積分
+                        if (add_power[i] < MIN_ADD_POWER) add_power[i] = MIN_ADD_POWER;          // 加算する速度が下がりすぎないように補正
                   }
                   pre_d = d;
             } else {

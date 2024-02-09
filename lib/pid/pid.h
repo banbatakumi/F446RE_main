@@ -4,6 +4,8 @@
 #include "mbed.h"
 #include "simplify_deg.h"
 
+#define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
+
 class PID {
      public:
       PID();
@@ -26,7 +28,7 @@ class PID {
       float pid;
       float pre_input;
 
-      float sampling_period;
+      uint16_t sampling_period;
       float limit;
 
       uint8_t type;

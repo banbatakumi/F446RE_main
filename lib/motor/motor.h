@@ -10,9 +10,13 @@
 #define PI 3.1415926535  // 円周率
 
 #define MOTOR_QTY 4
+#define MOTOR_0_DEGREE 45
+#define MOTOR_1_DEGREE 135
+#define MOTOR_2_DEGREE 225
+#define MOTOR_3_DEGREE 315
 
 #define BASE_POWER 10
-#define ENCODER_GAIN 50
+#define ENCODER_GAIN 0.00004
 #define MAX_ADD_POWER 50
 #define MIN_ADD_POWER -10
 
@@ -20,6 +24,8 @@
 #define POWER_MIN_LIMIT 1
 
 #define MOVING_AVE_NUM 50
+
+#define readus(timer_name_) (timer_name_).elapsed_time().count()
 class Motor {
      public:
       Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t* own_dir_);
@@ -56,7 +62,6 @@ class Motor {
       int16_t* own_dir;
 
       Timer addPowerTimer;
-      Timer accelerationTimer;
 };
 
 #endif

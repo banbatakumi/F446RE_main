@@ -22,6 +22,8 @@
 #define HOLD_MAX_POWER 100
 #define HOLD_WAIT_POWER 60
 
+#define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
+
 // グローバル変数定義
 uint8_t mode = 0;
 uint8_t moving_speed;

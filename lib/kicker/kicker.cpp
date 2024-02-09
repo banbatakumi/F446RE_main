@@ -9,17 +9,11 @@ Kicker::Kicker(PinName sig_1_, PinName sig_2_) : sig_1(sig_1_), sig_2(sig_2_) {
       chargeTimer.start();
 }
 
-void Kicker::SetPower(uint8_t power_) {
-      this->power = power_ * 1000;
-
-      if (power > 200000) power = 200000;
-}
-
 void Kicker::Kick() {
-      if (chargeTimer.read() > 0.5) {
+      if (readms(chargeTimer) > 500) {
             if (enable == 0) {
-                  ChargeTimeout.attach_us(mbed::callback(this, &Kicker::ChargeOff), power * 0.5);
-                  FlipTimeout.attach_us(mbed::callback(this, &Kicker::FlipOff), power);
+                  ChargeTimeout.attach(mbed::callback(this, &Kicker::ChargeOff), CHARGE_OFF_TIME);
+                  FlipTimeout.attach(mbed::callback(this, &Kicker::FlipOff), KICK_TIME);
                   sig_1 = 1;
                   sig_2 = 1;
 

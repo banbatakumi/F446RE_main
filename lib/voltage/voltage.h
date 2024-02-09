@@ -4,8 +4,10 @@
 #include "mbed.h"
 
 #define RC 0.5
-#define SAMPLE_CYCLE 0.5
+#define SAMPLE_CYCLE 500
 #define CHANGE_VOLTAGE 0.0002125037
+
+#define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
 class Voltage {
      public:
@@ -18,7 +20,7 @@ class Voltage {
 
       float battery_voltage_val;
 
-      Timer sampling_timer;
+      Timer samplingTimer;
 };
 
 #endif

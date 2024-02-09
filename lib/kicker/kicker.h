@@ -3,11 +3,13 @@
 
 #include "mbed.h"
 
+#define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
+
+#define KICK_TIME 30ms
+#define CHARGE_OFF_TIME 15ms
 class Kicker {
      public:
       Kicker(PinName sig_1_, PinName sig_2_);
-
-      void SetPower(uint8_t power_ = 100);
 
       void Kick();
       void ChargeOff();
@@ -17,7 +19,6 @@ class Kicker {
       DigitalOut sig_1;
       DigitalOut sig_2;
 
-      uint32_t power;
       bool enable;
 
       Timer chargeTimer;
