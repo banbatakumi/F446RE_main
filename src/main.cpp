@@ -20,7 +20,7 @@ void setup() {
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PID_TYPE);
 
-      defensePID.SetGain(10, 1, 1);
+      defensePID.SetGain(7.5, 1, 10);
       defensePID.SetSamplingPeriod(0.01);
       defensePID.SetLimit(100);
       defensePID.SelectType(PID_TYPE);
@@ -83,7 +83,7 @@ void OffenceMove() {
                   vector_x += ((24 - sensors.line_depth) * MySin(camera.ball_dir)) * 0.25;
                   vector_y += ((24 - sensors.line_depth) * MyCos(camera.ball_dir)) * 0.25;
             }
-            vector_dir = atan2(vector_x, vector_y) * 180.00 / PI;
+            vector_dir = atan2(vector_x, vector_y) * 180.0f / PI;
             vector_mag = abs(sqrt(pow(vector_x, 2) + pow(vector_y, 2)));
 
             lineStopTimer.start();
@@ -253,19 +253,19 @@ void OffenceMove() {
                         }
 
                         if (abs(camera.ball_dir) < 135) {  // 前の捕捉エリアに回り込む
-                              int16_t tmp_move_speed, tmp_move_angle, robot_angle = 0;
+                              int16_t tmp_move_speed, tmp_move_angle;
                               int16_t wrap_deg_addend;
 
                               // 角度
                               if (abs(camera.ball_dir) < 30) {
-                                    wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10.000);
+                                    wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10.0f);
                               } else {
                                     wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
                               }
-                              tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2));
+                              tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.0f), 2));
 
                               if (abs(camera.ball_dir) < 10) wrapTimer.start();
-                              if (abs(camera.ball_dir) > 45) {
+                              if (abs(camera.ball_dir) > 30) {
                                     wrapTimer.reset();
                                     wrapTimer.stop();
                               }
@@ -276,26 +276,25 @@ void OffenceMove() {
                               if (camera.ball_dis < 80) {
                                     tmp_move_speed = moving_speed;
                               } else if (readms(wrapTimer) > 250) {
-                                    tmp_move_speed = abs(camera.ball_dir) + (100 - camera.ball_dis) + 20;
-                                    if (abs(camera.ball_dir) < 30) robot_angle = camera.ball_dir + own_dir;
+                                    tmp_move_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
                               } else {
                                     tmp_move_speed = abs(wrapDirPID.Get());
                               }
 
                               if (tmp_move_speed > moving_speed) tmp_move_speed = moving_speed;
 
-                              motor.Run(tmp_move_angle, tmp_move_speed, robot_angle);
+                              motor.Run(tmp_move_angle, tmp_move_speed);
                         } else {  // 後ろの捕捉エリアに回り込む
                               int16_t tmp_move_speed, tmp_move_angle;
                               int16_t wrap_deg_addend;
 
                               // 角度
                               if (abs(camera.inverse_ball_dir) < 30) {
-                                    wrap_deg_addend = camera.inverse_ball_dir * (abs(camera.inverse_ball_dir) / 10.000);
+                                    wrap_deg_addend = camera.inverse_ball_dir * (abs(camera.inverse_ball_dir) / 10.0f);
                               } else {
                                     wrap_deg_addend = 90 * (abs(camera.inverse_ball_dir) / camera.inverse_ball_dir);
                               }
-                              tmp_move_angle = camera.inverse_ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2));
+                              tmp_move_angle = camera.inverse_ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.0f), 2));
 
                               if (abs(camera.inverse_ball_dir) < 10) wrapTimer.start();
                               if (abs(camera.inverse_ball_dir) > 45) {
@@ -309,7 +308,7 @@ void OffenceMove() {
                               if (camera.ball_dis < 80) {
                                     tmp_move_speed = moving_speed;
                               } else if (readms(wrapTimer) > 500) {
-                                    tmp_move_speed = (100 - camera.ball_dis) + 20;
+                                    tmp_move_speed = 125 - camera.ball_dis;
                               } else {
                                     tmp_move_speed = abs(wrapDirPID.Get());
                               }
@@ -339,7 +338,7 @@ void DefenseMove() {
             defenseShootTimer.stop();
       }
 
-      if (readms(defenseShootTimer) > 2000) {
+      if (readms(defenseShootTimer) > 20000) {
             if (readms(defenseShootTimer) < 3000) {
                   if (readms(defenseShootTimer) > 2250) {
                         if (sensors.is_on_line == 1) {
@@ -385,7 +384,7 @@ void DefenseMove() {
                         motor.Run(sensors.line_dir, (12 - sensors.line_interval) * 5);
                   } else {
                         defensePID.Compute(camera.ball_x, 0);
-                        motor.Run(atan2(vector_x, vector_y) * 180.00 / PI, abs(defensePID.Get()));
+                        motor.Run(atan2(vector_x, vector_y) * 180.0f / PI, abs(defensePID.Get()));
                   }
             } else {
                   defenseShootTimer.reset();

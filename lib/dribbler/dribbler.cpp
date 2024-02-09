@@ -17,7 +17,7 @@ void Dribbler::Hold(uint8_t speed_) {
       int16_t speed = speed_;
       motorAve.Compute(&speed);
       if (speed > 100) speed = 100;
-      motor_a = speed / 100.000;
+      motor_a = speed / 100.0f;
       motor_b = 0;
 }
 

@@ -92,7 +92,7 @@ int16_t Cam::GetOwnY() {
 }
 
 int16_t Cam::GetCenterDir() {
-      int16_t center_dir = SimplifyDeg(atan2(GetOwnX(), GetOwnY()) * 180.000 / PI - 180);
+      int16_t center_dir = SimplifyDeg(atan2(GetOwnX(), GetOwnY()) * 180.0f / PI - 180);
       return center_dir;
 }
 
