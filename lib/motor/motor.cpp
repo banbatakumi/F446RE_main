@@ -15,30 +15,20 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
 
       this->own_dir = own_dir_;
 
+      motor1Ave.SetLength(MOVING_AVE_NUM);
+      motor2Ave.SetLength(MOVING_AVE_NUM);
+      motor3Ave.SetLength(MOVING_AVE_NUM);
+      motor4Ave.SetLength(MOVING_AVE_NUM);
+
       addPowerTimer.start();
 }
 
-void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, float acceleration_time_, int16_t robot_angle_, uint8_t robot_angle_mode_, uint8_t pid_limit_) {
-      static uint8_t pre_moving_speed;
+void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle_, uint8_t turning_mode_, uint8_t turning_limit_) {
+      int16_t power[MOTOR_QTY];
       uint8_t moving_speed = moving_speed_;
       int16_t moving_dir = SimplifyDeg(moving_dir_);
-      int16_t power[MOTOR_QTY];
 
-      // 加速
-      if (accelerationTimer.read() <= acceleration_time_) {
-            moving_speed *= (1.000 / acceleration_time_) * accelerationTimer.read();
-      } else {
-            accelerationTimer.stop();
-      }
-      if (acceleration_time_ == 0 || pre_moving_speed != moving_speed_) {
-            accelerationTimer.reset();
-            accelerationTimer.stop();
-      } else {
-            accelerationTimer.start();
-      }
-      pre_moving_speed = moving_speed_;
-
-      if (moving_speed > power_max_limit) moving_speed = power_max_limit;
+      if (moving_speed > POWER_MAX_LIMIT) moving_speed = POWER_MAX_LIMIT;  // 指定速度が限界を超えていたときに補正
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             power[i] = MySin(moving_dir - (45 + i * 90)) * moving_speed * (i < 2 ? -1 : 1);  // 角度とスピードを各モーターの値に変更
@@ -54,70 +44,80 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, float acceleration_
       }
 
       static float add_power[MOTOR_QTY];
-      static int8_t pre_power[MOTOR_QTY];
+      static int16_t corrected_power[MOTOR_QTY];
+      static int16_t pre_corrected_power[MOTOR_QTY];
+      static float d, pre_d;
+      float add_power_limit;
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (abs(pre_power[i] - power[i]) > 50) add_power[i] = 0;
-            pre_power[i] = power[i];
-            if (abs(power[i]) > 10 && addPowerTimer.read() < 0.1) {
-                  if (encoder_val[i] < abs(power[i]) / encoder_gain) {
-                        add_power[i] += abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 75 * addPowerTimer.read();
-                        if (add_power[i] > 50) add_power[i] = 50;
+            corrected_power[i] = power[i];
+            if (abs(pre_corrected_power[i] - corrected_power[i]) > 50) add_power[i] = 0;  // 急に速度が変わった場合は積分をリセット
+            pre_corrected_power[i] = corrected_power[i];
+
+            if (abs(power[i]) >= 10 && addPowerTimer.read() < 0.1) {
+                  d = abs(encoder_val[i] - abs(corrected_power[i]) / (100.000 / BASE_POWER));  // 指定速度と実際の速度の差
+                  if (encoder_val[i] < abs(corrected_power[i]) / (100.000 / BASE_POWER)) {
+                        add_power[i] += (d + pre_d) * addPowerTimer.read() / 2 * ENCODER_GAIN;  // 台形積分
+                        add_power_limit = POWER_MAX_LIMIT - abs(power[i]);
+                        if (add_power_limit > MAX_ADD_POWER) add_power_limit = MAX_ADD_POWER;  // 加算する速度が上がりすぎないように補正
+                        if (add_power[i] > add_power_limit) add_power[i] = add_power_limit;    // 加算後の速度が100を超えないように補正
                   } else {
-                        add_power[i] -= abs(encoder_val[i] - abs(power[i]) / encoder_gain) * 75 * addPowerTimer.read();
-                        if (add_power[i] < 0) add_power[i] = 0;
+                        add_power[i] -= (d + pre_d) * addPowerTimer.read() / 2 * ENCODER_GAIN;  // 台形積分
+                        if (add_power[i] < MIN_ADD_POWER) add_power[i] = MIN_ADD_POWER;         // 加算する速度が下がりすぎないように補正
                   }
+                  pre_d = d;
             } else {
-                  add_power[i] = 0;
+                  add_power[i] = 0;  // 指定速度が小さすぎるor時間が経ちすぎていた時は積分をリセット
             }
       }
       addPowerTimer.reset();
+
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             if (power[i] > 0) {
-                  power[i] += add_power[i];
+                  corrected_power[i] = power[i] + add_power[i];
             } else {
-                  power[i] -= add_power[i];
+                  corrected_power[i] = power[i] - add_power[i];
             }
       }
 
       // PID姿勢制御
       attitudeControlPID.Compute(*own_dir, robot_angle_);
-      attitudeControlPID.SetLimit(pid_limit_);
+      attitudeControlPID.SetLimit(turning_limit_);
       float tmp_pid = attitudeControlPID.Get();
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
             // ボールを捕捉しながら回転するために姿勢制御を与えるモーターを制限
-            if (robot_angle_mode_ == 0) {
-                  power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
-            } else if (robot_angle_mode_ == 1) {  // ボールを前に捕捉した状態
-                  if (i == 1 || i == 2) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
-            } else if (robot_angle_mode_ == 2) {  // ボールを右に捕捉した状態
-                  if (i == 2 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
-            } else if (robot_angle_mode_ == 3) {  // ボールを後ろに捕捉した状態
-                  if (i == 0 || i == 3) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
-            } else if (robot_angle_mode_ == 4) {  // ボールを左に捕捉した状態
-                  if (i == 0 || i == 1) power[i] += i < 2 ? tmp_pid * -1 : tmp_pid * 2;
+            if (turning_mode_ == 0) {
+                  corrected_power[i] += i < 2 ? tmp_pid * -1 : tmp_pid;
+            } else if (turning_mode_ == 1) {  // ボールを前に捕捉した状態
+                  if (i == 1 || i == 2) corrected_power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+            } else if (turning_mode_ == 2) {  // ボールを右に捕捉した状態
+                  if (i == 2 || i == 3) corrected_power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+            } else if (turning_mode_ == 3) {  // ボールを後ろに捕捉した状態
+                  if (i == 0 || i == 3) corrected_power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
+            } else if (turning_mode_ == 4) {  // ボールを左に捕捉した状態
+                  if (i == 0 || i == 1) corrected_power[i] += i < 2 ? tmp_pid * -2 : tmp_pid * 2;
             }
       }
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (power[i] > power_max_limit) power[i] = power_max_limit * (abs(power[i]) / power[i]);
+            if (corrected_power[i] > POWER_MAX_LIMIT) corrected_power[i] = POWER_MAX_LIMIT * (abs(corrected_power[i]) / corrected_power[i]);
       }
 
       // 移動平均フィルタ
-      motor1Ave.Compute(&power[0]);
-      motor2Ave.Compute(&power[1]);
-      motor3Ave.Compute(&power[2]);
-      motor4Ave.Compute(&power[3]);
+      motor1Ave.Compute(&corrected_power[0]);
+      motor2Ave.Compute(&corrected_power[1]);
+      motor3Ave.Compute(&corrected_power[2]);
+      motor4Ave.Compute(&corrected_power[3]);
 
       // モーターへ出力
-      motor_1_a = abs(power[0]) < power_min_limit ? 1 : (power[0] > 0 ? power[0] * 0.01000 : 0);
-      motor_1_b = abs(power[0]) < power_min_limit ? 1 : (power[0] < 0 ? power[0] * -0.01000 : 0);
-      motor_2_a = abs(power[1]) < power_min_limit ? 1 : (power[1] > 0 ? power[1] * 0.01000 : 0);
-      motor_2_b = abs(power[1]) < power_min_limit ? 1 : (power[1] < 0 ? power[1] * -0.01000 : 0);
-      motor_3_a = abs(power[2]) < power_min_limit ? 1 : (power[2] > 0 ? power[2] * 0.01000 : 0);
-      motor_3_b = abs(power[2]) < power_min_limit ? 1 : (power[2] < 0 ? power[2] * -0.01000 : 0);
-      motor_4_a = abs(power[3]) < power_min_limit ? 1 : (power[3] > 0 ? power[3] * 0.01000 : 0);
-      motor_4_b = abs(power[3]) < power_min_limit ? 1 : (power[3] < 0 ? power[3] * -0.01000 : 0);
+      motor_1_a = abs(corrected_power[0]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[0] > 0 ? corrected_power[0] * 0.01000 : 0);
+      motor_1_b = abs(corrected_power[0]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[0] < 0 ? corrected_power[0] * -0.01000 : 0);
+      motor_2_a = abs(corrected_power[1]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[1] > 0 ? corrected_power[1] * 0.01000 : 0);
+      motor_2_b = abs(corrected_power[1]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[1] < 0 ? corrected_power[1] * -0.01000 : 0);
+      motor_3_a = abs(corrected_power[2]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[2] > 0 ? corrected_power[2] * 0.01000 : 0);
+      motor_3_b = abs(corrected_power[2]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[2] < 0 ? corrected_power[2] * -0.01000 : 0);
+      motor_4_a = abs(corrected_power[3]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[3] > 0 ? corrected_power[3] * 0.01000 : 0);
+      motor_4_b = abs(corrected_power[3]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[3] < 0 ? corrected_power[3] * -0.01000 : 0);
 }
 
 void Motor::SetPwmPeriod(uint16_t pwm_period_) {
@@ -135,25 +135,6 @@ void Motor::SetAttitudeControlPID(float kp_, float ki_, float kd_) {
       attitudeControlPID.SetGain(kp_, ki_, kd_);
       attitudeControlPID.SetSamplingPeriod();
       attitudeControlPID.SelectType(PI_D_TYPE);
-}
-
-void Motor::SetMovingAveLength(uint8_t length_) {
-      motor1Ave.SetLength(length_);
-      motor2Ave.SetLength(length_);
-      motor3Ave.SetLength(length_);
-      motor4Ave.SetLength(length_);
-}
-
-void Motor::SetPowerMaxLimit(uint8_t limit_) {
-      power_max_limit = limit_;
-}
-
-void Motor::SetPowerMinLimit(uint8_t limit_) {
-      power_min_limit = limit_;
-}
-
-void Motor::SetEncoderGain(float gain_) {
-      encoder_gain = gain_;
 }
 
 void Motor::Brake(uint16_t brake_time_) {

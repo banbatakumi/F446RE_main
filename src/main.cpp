@@ -7,12 +7,8 @@ void setup() {
       // uiSerial.attach(&Ui, Serial::RxIrq);
 
       // モーター
-      motor.SetPwmPeriod(20);                      // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
-      motor.SetAttitudeControlPID(1.5, 0.5, 0.1);  // デフォルトゲイン：(1, 0.5, 0.1)
-      motor.SetMovingAveLength(50);
-      motor.SetPowerMaxLimit(90);
-      motor.SetPowerMinLimit(5);
-      motor.SetEncoderGain(10);
+      motor.SetPwmPeriod(20);                       // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      motor.SetAttitudeControlPID(1.5, 0.25, 0.1);  // デフォルトゲイン：(1, 0.5, 0.1)
 
       // ドリブラー
       dribblerFront.SetPwmPeriod(20);  // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
@@ -54,9 +50,9 @@ int main() {
             } else if (mode == 1) {
                   OffenceMove();
             } else if (mode == 2) {
-                  DefenceMove();
+                  DefenseMove();
             } else if (mode == 3) {
-                  motor.Run();
+                  motor.Run(0, 50);
             }
       }
 }
@@ -105,20 +101,20 @@ void OffenceMove() {
             } else if (holdFront.IsHold()) {
                   dribblerFront.Hold(HOLD_MAX_POWER);
                   if (sensors.is_on_line == 1) {
-                        motor.Run(sensors.line_inside_dir, 0, 25, 0, FRONT, 15);
+                        motor.Run(sensors.line_inside_dir, 25, 0, FRONT, 15);
                   } else if (sensors.is_line_left == 1) {
-                        motor.Run(90, 25, 0, 0, FRONT, 15);
+                        motor.Run(90, 25, 0, FRONT, 15);
                   } else if (sensors.is_line_right == 1) {
-                        motor.Run(-90, 25, 0, 0, FRONT, 15);
+                        motor.Run(-90, 25, 0, FRONT, 15);
                   }
             } else if (holdBack.IsHold()) {
                   dribblerBack.Hold(HOLD_MAX_POWER);
                   if (sensors.is_on_line == 1) {
                         motor.Run(sensors.line_inside_dir, 25, 0, BACK, 15);
                   } else if (sensors.is_line_left == 1) {
-                        motor.Run(90, 25, 0, 0, BACK, 15);
+                        motor.Run(90, 25, 0, BACK, 15);
                   } else if (sensors.is_line_right == 1) {
-                        motor.Run(-90, 25, 0, 0, BACK, 15);
+                        motor.Run(-90, 25, 0, BACK, 15);
                   }
             } else {
                   if (abs(camera.ball_dir) < 30 && camera.ball_dis > 80) {
@@ -225,7 +221,7 @@ void OffenceMove() {
 
                               if ((camera.front_goal_dir - own_dir) > 60) {
                                     tmp_move_dir = 180 * (abs(tmp_move_dir) / tmp_move_dir);
-                                    motor.Run(tmp_move_dir - own_dir, 25, robot_dir, robot_dir > 0 ? RIGHT : LEFT, 10);
+                                    motor.Run(tmp_move_dir - own_dir, 25, robot_dir, FRONT, 10);
                               } else if (camera.front_goal_size > 30) {
                                     motor.Run(0, 0, camera.front_goal_dir > 0 ? 60 : -60, FRONT, 25);
                               } else {
@@ -234,7 +230,7 @@ void OffenceMove() {
                                     } else if (sensors.dis[3] < 20 && sensors.dis[1] > 20) {
                                           tmp_move_dir = 45;
                                     }
-                                    motor.Run(tmp_move_dir - own_dir, moving_speed, robot_dir, robot_dir > 0 ? RIGHT : LEFT, 10);
+                                    motor.Run(tmp_move_dir - own_dir, moving_speed, robot_dir, FRONT, 10);
                               }
                         }
                   } else if (holdBack.IsHold()) {           // 後ろに捕捉している時
@@ -269,7 +265,7 @@ void OffenceMove() {
                               } else {
                                     wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
                               }
-                              tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2.5));
+                              tmp_move_angle = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2));
 
                               if (abs(camera.ball_dir) < 10) wrapTimer.start();
                               if (abs(camera.ball_dir) > 45) {
@@ -301,7 +297,7 @@ void OffenceMove() {
                               } else {
                                     wrap_deg_addend = 90 * (abs(camera.inverse_ball_dir) / camera.inverse_ball_dir);
                               }
-                              tmp_move_angle = camera.inverse_ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2.5));
+                              tmp_move_angle = camera.inverse_ball_dir + (wrap_deg_addend * pow((camera.ball_dis / 95.000), 2));
 
                               if (abs(camera.inverse_ball_dir) < 10) wrapTimer.start();
                               if (abs(camera.inverse_ball_dir) > 45) {
@@ -330,7 +326,7 @@ void OffenceMove() {
       }
 }
 
-void DefenceMove() {
+void DefenseMove() {
       if (sensors.hold_front == 1) {
             dribblerFront.Hold(HOLD_MAX_POWER);
       } else if (abs(camera.ball_dir) < 30 && camera.ball_dis > 90) {
@@ -506,10 +502,10 @@ void Ui() {
                               send_byte_num = 1;
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
-                              int16_t debug_val_1 = camera.ball_x;
-                              int16_t debug_val_2 = holdBack.GetVal();
-                              uint8_t debug_val_3 = sensors.encoder_val[0];
-                              uint8_t debug_val_4 = sensors.encoder_val[1];
+                              int16_t debug_val_1 = sensors.encoder_val[0];
+                              int16_t debug_val_2 = sensors.encoder_val[1];
+                              uint8_t debug_val_3 = sensors.encoder_val[2];
+                              uint8_t debug_val_4 = sensors.encoder_val[3];
 
                               send_byte_num = 7;
                               send_byte[1] = uint8_t(voltage.Get() * 20);

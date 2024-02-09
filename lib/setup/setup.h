@@ -20,7 +20,7 @@
 #define UI_UART_SPEED 9600
 
 #define HOLD_MAX_POWER 100
-#define HOLD_WAIT_POWER 90
+#define HOLD_WAIT_POWER 60
 
 // グローバル変数定義
 uint8_t mode = 0;
@@ -36,7 +36,7 @@ UnbufferedSerial uiSerial(PC_10, PC_11);
 void Ui();
 
 void OffenceMove();
-void DefenceMove();
+void DefenseMove();
 
 void GetSensors();
 
