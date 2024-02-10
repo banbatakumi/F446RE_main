@@ -1,5 +1,5 @@
-#ifndef _SETUP_COM_H_
-#define _SETUP_COM_H_
+#ifndef _SETUP_H_
+#define _SETUP_H_
 
 #include "cam.h"
 #include "dribbler.h"
@@ -20,7 +20,7 @@
 #define UI_UART_SPEED 9600
 
 #define HOLD_MAX_POWER 100
-#define HOLD_WAIT_POWER 60
+#define HOLD_WAIT_POWER 75
 
 #define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
@@ -29,7 +29,6 @@ uint8_t mode = 0;
 uint8_t moving_speed;
 uint8_t line_moving_speed;
 
-// ロボット関連
 int16_t own_dir;
 
 // UART通信定義 (TX, RX)
@@ -43,7 +42,6 @@ void DefenseMove();
 void GetSensors();
 
 PID wrapDirPID;
-
 PID defensePID;
 
 Voltage voltage(PA_4);
@@ -59,14 +57,6 @@ Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3);
 
 DigitalOut led[2] = {PA_5, PA_6};
-
-Timer FrontCurveShootTimer;
-Timer BackCurveShootTimer;
-Timer lineStopTimer;
-Timer goToCenterTimer;
-Timer defenseShootTimer;
-Timer goToGoalTimer;
-Timer wrapTimer;
 typedef struct {
       int16_t ball_dir;
       int16_t inverse_ball_dir;
