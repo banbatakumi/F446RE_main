@@ -28,10 +28,10 @@ class Cam {
       int16_t blue_goal_dir;
       uint8_t blue_goal_size;
 
-      int16_t front_goal_dir;
-      uint8_t front_goal_size;
-      int16_t back_goal_dir;
-      uint8_t back_goal_size;
+      int16_t ops_goal_dir;
+      uint8_t ops_goal_size;
+      int16_t own_goal_dir;
+      uint8_t own_goal_size;
 
       bool is_goal_front;
 

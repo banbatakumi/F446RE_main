@@ -1,9 +1,11 @@
 #ifndef _CONFIGURATION_H_
 #define _CONFIGURATION_H_
 
-#include "offence_mode.h"
 #include "defense_mode.h"
+#include "offense_mode.h"
 #include "setup.h"
+
+Timer test;
 
 void ModeRun() {
       voltage.Read();
@@ -18,11 +20,34 @@ void ModeRun() {
       if (mode == 0) {
             motor.Free();
       } else if (mode == 1) {
-            OffenceMove();
+            OffenseMove();
       } else if (mode == 2) {
             DefenseMove();
       } else if (mode == 3) {
-            motor.Run(0);
+            /*
+            if (sensors.is_on_line == 1) {  // ラインセンサの処理
+                  motor.Run(sensors.line_inside_dir, line_moving_speed);
+            } else if (sensors.is_line_left) {
+                  motor.Run(90, line_moving_speed);
+            } else if (sensors.is_line_right) {
+                  motor.Run(-90, line_moving_speed);
+            } else {
+                  int16_t wrap_deg_addend;
+                  int16_t robot_dir = camera.ops_goal_dir + own_dir;
+                  if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
+                  // 角度
+                  if (abs(sensors.ir_dir) < 45) {
+                        wrap_deg_addend = sensors.ir_dir * (abs(sensors.ir_dir) / 22.5f);
+                  } else {
+                        wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
+                  }
+                  tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend * pow((sensors.ir_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
+
+                  tmp_moving_speed = moving_speed;
+                  if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+
+                  motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
+            }*/
       }
 }
 
@@ -37,10 +62,10 @@ void GetSensors() {
       camera.y_goal_size = cam.yellow_goal_size;
       camera.b_goal_dir = cam.blue_goal_dir;
       camera.b_goal_size = cam.blue_goal_size;
-      camera.front_goal_dir = cam.front_goal_dir;
-      camera.front_goal_size = cam.front_goal_size;
-      camera.back_goal_dir = cam.back_goal_dir;
-      camera.back_goal_size = cam.back_goal_size;
+      camera.ops_goal_dir = cam.ops_goal_dir;
+      camera.ops_goal_size = cam.ops_goal_size;
+      camera.own_goal_dir = cam.own_goal_dir;
+      camera.own_goal_size = cam.own_goal_size;
       camera.is_goal_front = cam.is_goal_front;
       camera.ball_x = cam.GetBallX();
       camera.ball_y = cam.GetBallY();
@@ -124,8 +149,8 @@ void Ui() {
                               send_byte_num = 1;
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
-                              int16_t debug_val_1 = sensors.encoder_val[0];
-                              int16_t debug_val_2 = sensors.encoder_val[1];
+                              int16_t debug_val_1 = holdFront.GetVal();
+                              int16_t debug_val_2 = holdBack.GetVal();
                               uint8_t debug_val_3 = sensors.encoder_val[2];
                               uint8_t debug_val_4 = sensors.encoder_val[3];
 

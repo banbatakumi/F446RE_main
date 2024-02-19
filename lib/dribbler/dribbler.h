@@ -12,7 +12,7 @@ class Dribbler {
       void Hold(uint8_t speed_ = 50);
       void Kick();
       void Stop();
-      void Brake();
+      void Brake(uint16_t brake_time_ = 0);
 
      private:
       MovingAve motorAve;

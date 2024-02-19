@@ -29,5 +29,5 @@ void Hold::SetTh() {
             th += rc_val;
       }
       th /= SET_TH_NUM;
-      th -= 15;
+      th -= 30;
 }

@@ -20,7 +20,7 @@
 #define UI_UART_SPEED 9600
 
 #define HOLD_MAX_POWER 100
-#define HOLD_WAIT_POWER 75
+#define HOLD_WAIT_POWER 90
 
 #define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
@@ -35,9 +35,6 @@ int16_t own_dir;
 UnbufferedSerial uiSerial(PC_10, PC_11);
 
 void Ui();
-
-void OffenceMove();
-void DefenseMove();
 
 void GetSensors();
 
@@ -65,10 +62,10 @@ typedef struct {
       uint8_t y_goal_size;
       int16_t b_goal_dir;
       uint8_t b_goal_size;
-      int16_t front_goal_dir;
-      uint8_t front_goal_size;
-      int16_t back_goal_dir;
-      uint8_t back_goal_size;
+      int16_t ops_goal_dir;
+      uint8_t ops_goal_size;
+      int16_t own_goal_dir;
+      uint8_t own_goal_size;
       bool is_goal_front;
       int16_t ball_x;
       int16_t ball_y;

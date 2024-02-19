@@ -32,8 +32,9 @@ void Dribbler::Stop() {
       motorAve.Reset();
 }
 
-void Dribbler::Brake() {
+void Dribbler::Brake(uint16_t brake_time_) {
       motor_a = 1;
       motor_b = 1;
       motorAve.Reset();
+      wait_us(brake_time_ * 1000);
 }

@@ -50,15 +50,15 @@ void Cam::Receive() {
                   }
 
                   if (is_front_goal_yellow == 1) {  // 自ゴール青
-                        front_goal_dir = yellow_goal_dir;
-                        front_goal_size = yellow_goal_size;
-                        back_goal_dir = blue_goal_dir;
-                        back_goal_size = blue_goal_size;
+                        ops_goal_dir = yellow_goal_dir;
+                        ops_goal_size = yellow_goal_size;
+                        own_goal_dir = blue_goal_dir;
+                        own_goal_size = blue_goal_size;
                   } else {  // 自ゴール黄
-                        front_goal_dir = blue_goal_dir;
-                        front_goal_size = blue_goal_size;
-                        back_goal_dir = yellow_goal_dir;
-                        back_goal_size = yellow_goal_size;
+                        ops_goal_dir = blue_goal_dir;
+                        ops_goal_size = blue_goal_size;
+                        own_goal_dir = yellow_goal_dir;
+                        own_goal_size = yellow_goal_size;
                   }
             }
 
@@ -80,13 +80,13 @@ int16_t Cam::GetBallY() {
 }
 
 int16_t Cam::GetOwnX() {
-      int16_t own_x = (200 - front_goal_size) * MySin(front_goal_dir + *own_dir) + (200 - back_goal_size) * MySin(back_goal_dir + *own_dir);
+      int16_t own_x = (200 - ops_goal_size) * MySin(ops_goal_dir + *own_dir) + (200 - own_goal_size) * MySin(own_goal_dir + *own_dir);
       own_x /= -2;
       return own_x;
 }
 
 int16_t Cam::GetOwnY() {
-      int16_t own_y = (200 - front_goal_size) * MyCos(front_goal_dir + *own_dir) + (200 - back_goal_size) * MyCos(back_goal_dir + *own_dir);
+      int16_t own_y = (200 - ops_goal_size) * MyCos(ops_goal_dir + *own_dir) + (200 - own_goal_size) * MyCos(own_goal_dir + *own_dir);
       own_y /= -2;
       return own_y;
 }

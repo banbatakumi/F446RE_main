@@ -4,7 +4,7 @@
 #include "mbed.h"
 
 #define RC 0.5
-#define SET_TH_NUM 500
+#define SET_TH_NUM 250
 class Hold {
      public:
       Hold(PinName sensor_);
