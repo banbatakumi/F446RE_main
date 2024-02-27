@@ -39,7 +39,6 @@ void Ui();
 void GetSensors();
 
 PID wrapDirPID;
-PID defensePID;
 
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8, &own_dir);

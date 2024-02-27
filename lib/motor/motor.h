@@ -20,10 +20,10 @@
 #define MAX_ADD_POWER 75
 #define MIN_ADD_POWER 0
 
-#define POWER_MAX_LIMIT 90
+#define POWER_MAX_LIMIT 95
 #define POWER_MIN_LIMIT 1
 
-#define MOVING_AVE_NUM 50
+#define MOVING_AVE_NUM 25
 
 #define readus(timer_name_) (timer_name_).elapsed_time().count()
 class Motor {

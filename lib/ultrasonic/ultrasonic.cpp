@@ -30,7 +30,7 @@ void Ultrasonic::Receive() {
                   ir_dis = recv_data[5];
 
                   // 送信
-                  serial.write(&do_ir_led_on, 1);
+                  serial.write(&on_ir_led, 1);
             }
 
             data_length = 0;
@@ -40,10 +40,10 @@ void Ultrasonic::Receive() {
       }
 }
 
-void Ultrasonic::IrLedOn() {
-      do_ir_led_on = 1;
+void Ultrasonic::OnIrLed(bool led_1, bool led_2, bool led_3, bool led_4) {
+      on_ir_led = led_4 << 3 | led_3 << 2 | led_2 << 1 | led_1;
 }
 
-void Ultrasonic::IrLedOff() {
-      do_ir_led_on = 0;
+void Ultrasonic::OffIrLed() {
+      on_ir_led = 0;
 }

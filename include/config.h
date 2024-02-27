@@ -24,30 +24,53 @@ void ModeRun() {
       } else if (mode == 2) {
             DefenseMove();
       } else if (mode == 3) {
-            /*
-            if (sensors.is_on_line == 1) {  // ラインセンサの処理
+            if (sensors.is_on_line) {
                   motor.Run(sensors.line_inside_dir, line_moving_speed);
             } else if (sensors.is_line_left) {
                   motor.Run(90, line_moving_speed);
             } else if (sensors.is_line_right) {
                   motor.Run(-90, line_moving_speed);
             } else {
-                  int16_t wrap_deg_addend;
-                  int16_t robot_dir = camera.ops_goal_dir + own_dir;
-                  if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
-                  // 角度
-                  if (abs(sensors.ir_dir) < 45) {
-                        wrap_deg_addend = sensors.ir_dir * (abs(sensors.ir_dir) / 22.5f);
+                  motor.Free();
+                  /*
+                  if (abs(camera.ball_dir) < 30 && camera.ball_dis > 80) {
+                        dribblerFront.Hold(100);
                   } else {
-                        wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
+                        dribblerFront.Hold(0);
                   }
-                  tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend * pow((sensors.ir_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
 
-                  tmp_moving_speed = moving_speed;
+                  int16_t wrap_deg_addend;
+                  // 角度
+                  if (abs(camera.ball_dir) < 45) {
+                        wrap_deg_addend = camera.ball_dir * 2;
+                  } else {
+                        wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
+                  }
+                  int16_t tmp_moving_dir = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
+                  int16_t robot_dir = camera.ops_goal_dir;
+                  if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
+
+                  if (abs(camera.ball_dir) < 10) wrapTimer.start();
+                  if (abs(camera.ball_dir) > 30) {
+                        wrapTimer.reset();
+                        wrapTimer.stop();
+                  }
+
+                  // 速度
+                  wrapDirPID.Compute(camera.ball_dir, 0);
+
+                  if (camera.ball_dis < 80) {
+                        tmp_moving_speed = moving_speed;
+                  } else if (readms(wrapTimer) > 500) {
+                        tmp_moving_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
+                  } else {
+                        tmp_moving_speed = abs(wrapDirPID.Get());
+                  }
                   if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
 
                   motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
-            }*/
+                  if (sensors.hold_front) kicker.Kick();*/
+            }
       }
 }
 
@@ -135,9 +158,9 @@ void Ui() {
                   if (mode == 0 || mode == 3) {
                         if (is_own_dir_correction == 1 && mode == 0) imu.SetZero();
                         if (item == 4) {
-                              ultrasonic.IrLedOn();
+                              ultrasonic.OnIrLed();
                         } else {
-                              ultrasonic.IrLedOff();
+                              ultrasonic.OffIrLed();
                         }
 
                         // 送信
@@ -149,8 +172,8 @@ void Ui() {
                               send_byte_num = 1;
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
-                              int16_t debug_val_1 = holdFront.GetVal();
-                              int16_t debug_val_2 = holdBack.GetVal();
+                              int16_t debug_val_1 = own_dir;
+                              int16_t debug_val_2 = sensors.encoder_val[1];
                               uint8_t debug_val_3 = sensors.encoder_val[2];
                               uint8_t debug_val_4 = sensors.encoder_val[3];
 
@@ -176,12 +199,18 @@ void Ui() {
                                     send_byte_num = 3;
                                     send_byte[1] = camera.ball_dir / 2 + 90;
                                     send_byte[2] = camera.ball_dis;
-                              } else {
+                              } else if (sub_item == 2) {
                                     send_byte_num = 5;
                                     send_byte[1] = camera.y_goal_dir / 2 + 90;
                                     send_byte[2] = camera.y_goal_size;
                                     send_byte[3] = camera.b_goal_dir / 2 + 90;
                                     send_byte[4] = camera.b_goal_size;
+                              } else {
+                                    send_byte_num = 5;
+                                    send_byte[1] = camera.center_dir / 2 + 90;
+                                    send_byte[2] = camera.center_dis;
+                                    send_byte[3] = camera.own_x + 100;
+                                    send_byte[4] = camera.own_y + 100;
                               }
                         } else if (item == 4) {
                               send_byte_num = 3;
@@ -218,7 +247,6 @@ void Ui() {
                         }
                         break;
                   case 2:
-                        dribblerFront.Brake();
                         kicker.Kick();
                         break;
                   case 3:

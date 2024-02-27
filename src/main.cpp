@@ -8,8 +8,8 @@ void setup() {
       // uiSerial.attach(&Ui, Serial::RxIrq);
 
       // モーター
-      motor.SetPwmPeriod(20);                       // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
-      motor.SetAttitudeControlPID(1.5, 0.25, 0.1);  // デフォルトゲイン：(1, 0.5, 0.1)
+      motor.SetPwmPeriod(20);                      // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
+      motor.SetAttitudeControlPID(1.5, 0.5, 0.1);  // デフォルトゲイン：(1, 0.5, 0.1)
 
       // ドリブラー
       dribblerFront.SetPwmPeriod(20);  // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
@@ -20,11 +20,6 @@ void setup() {
       wrapDirPID.SetSamplingPeriod(0.01);
       wrapDirPID.SetLimit(100);
       wrapDirPID.SelectType(PID_TYPE);
-
-      defensePID.SetGain(7.5, 1, 10);
-      defensePID.SetSamplingPeriod(0.01);
-      defensePID.SetLimit(100);
-      defensePID.SelectType(PID_TYPE);
 
       holdFront.SetTh();
       holdBack.SetTh();
