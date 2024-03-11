@@ -5,7 +5,7 @@
 
 #define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
-#define KICK_TIME 30ms
+#define KICK_TIME 50ms
 #define CHARGE_OFF_TIME 15ms
 class Kicker {
      public:

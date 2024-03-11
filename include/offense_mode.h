@@ -342,12 +342,24 @@ void OffenseMove() {
                   is_pre_line_right = 0;
                   is_pre_line = 0;
 
+                  if (sensors.ir_dis != 0) {
+                        ultrasonic.OnIrLed(0, 1, 1, 0);
+                  } else {
+                        ultrasonic.OffIrLed();
+                  }
+
                   if (enable_back_curve_shoot == 1) {  // 後ろドリブラーのマカオシュート
                         BackCureveShoot();
-                  } else if (holdFront.IsHold()) {
-                        HoldFrontMove();           // 前に捕捉している時
+                  } else if (holdFront.IsHold()) {  // 前に捕捉している時
+                        HoldFrontMove();
                   } else if (holdBack.IsHold()) {  // 後ろに捕捉している時
                         HoldBackMove();
+                  } else if (sensors.ir_dis != 0) {
+                        dribblerBack.Hold();
+                        tmp_moving_dir = atan2(camera.ball_x, camera.ball_y + 25) * 180.0f / PI;
+                        tmp_moving_speed = abs(camera.inverse_ball_dir) * 3 + abs(70 - camera.ball_dis) * 3;
+                        if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+                        motor.Run(tmp_moving_dir, tmp_moving_speed);
                   } else {
                         is_first_hold = 1;
                         if (IS_BALL_NEAR_OF_FRONT) {
@@ -361,7 +373,7 @@ void OffenseMove() {
                               dribblerBack.Hold(0);
                         }
 
-                        if (abs(camera.ball_dir) < (camera.own_y > 0 ? 150 : 90)) {  // 前の捕捉エリアに回り込む
+                        if (abs(camera.ball_dir) < (camera.own_y > 0 ? 150 : 120)) {  // 前の捕捉エリアに回り込む
                               WrapToFront();
                         } else {  // 後ろの捕捉エリアに回り込む
                               WrapToBack();
