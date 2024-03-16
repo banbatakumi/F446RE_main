@@ -3,8 +3,8 @@
 
 #include "defense_mode.h"
 #include "offense_mode.h"
-//#include "light_defense_mode.h"
-//#include "light_offense_mode.h"
+// #include "light_defense_mode.h"
+// #include "light_offense_mode.h"
 #include "setup.h"
 
 Timer test;
@@ -26,52 +26,40 @@ void ModeRun() {
       } else if (mode == 2) {
             DefenseMove();
       } else if (mode == 3) {
-            /*
-             if (sensors.is_on_line) {
-                   motor.Run(sensors.line_inside_dir, line_moving_speed);
-             } else if (sensors.is_line_left) {
-                   motor.Run(90, line_moving_speed);
-             } else if (sensors.is_line_right) {
-                   motor.Run(-90, line_moving_speed);
-             } else {
-                   if (abs(camera.ball_dir) < 30 && camera.ball_dis > 80) {
-                         dribblerFront.Hold(100);
-                   } else {
-                         dribblerFront.Hold(0);
-                   }
+            robot_dir = camera.ops_goal_dir;
+            if (abs(robot_dir) > 70) robot_dir = 70 * (robot_dir / abs(robot_dir));
+            if (sensors.is_on_line) {
+                  motor.Run(sensors.line_inside_dir, line_moving_speed, robot_dir);
+            }else {
+                  int16_t wrap_deg_addend;
+                  // 角度
+                  if (abs(camera.ball_dir) <= 30) {
+                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10.0f);
+                  } else {
+                        wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
+                  }
+                  int16_t tmp_moving_dir = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
 
-                   int16_t wrap_deg_addend;
-                   // 角度
-                   if (abs(camera.ball_dir) < 45) {
-                         wrap_deg_addend = camera.ball_dir * 2;
-                   } else {
-                         wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
-                   }
-                   int16_t tmp_moving_dir = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
-                   int16_t robot_dir = camera.ops_goal_dir;
-                   if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
+                  if (abs(camera.ball_dir) < 10) wrapTimer.start();
+                  if (abs(camera.ball_dir) > 30) {
+                        wrapTimer.reset();
+                        wrapTimer.stop();
+                  }
 
-                   if (abs(camera.ball_dir) < 10) wrapTimer.start();
-                   if (abs(camera.ball_dir) > 30) {
-                         wrapTimer.reset();
-                         wrapTimer.stop();
-                   }
+                  // 速度
+                  wrapDirPID.Compute(camera.ball_dir, 0);
 
-                   // 速度
-                   wrapDirPID.Compute(camera.ball_dir, 0);
-
-                   if (camera.ball_dis < 80) {
-                         tmp_moving_speed = moving_speed;
-                   } else if (readms(wrapTimer) > 500) {
-                         tmp_moving_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
-                   } else {
-                         tmp_moving_speed = abs(wrapDirPID.Get());
-                   }
-                   if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-
-                   motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
-                   if (sensors.hold_front) kicker.Kick();
-             }*/
+                  if (camera.ball_dis < 80) {
+                        tmp_moving_speed = moving_speed;
+                  } else if (readms(wrapTimer) > 100) {
+                        tmp_moving_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
+                  } else {
+                        tmp_moving_speed = abs(wrapDirPID.Get());
+                  }
+                  if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+                  motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
+                  if (sensors.hold_front) kicker.Kick();
+            }
       }
 }
 

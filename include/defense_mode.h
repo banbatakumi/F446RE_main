@@ -5,7 +5,6 @@
 #define IS_BALL_NEAR_OF_FRONT (abs(camera.ball_dir) < 30 && camera.ball_dis > 90)
 
 #define BALL_WAIT_TIME 2000
-#define GO_TO_GOAL_TIME 1000
 
 Timer defenseShootTimer;
 Timer backToCenterTimer;
@@ -68,8 +67,8 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(camera.ball_dir) * 3;
-            if (abs(camera.ball_dir) < 5) tmp_moving_speed = 0;
+            tmp_moving_speed = abs(camera.ball_dir) * 2.5;
+            if (abs(camera.ball_dir) < 10 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Run(tmp_moving_dir, tmp_moving_speed);
       }
@@ -83,6 +82,11 @@ void DefenseMove() {
       } else {
             dribblerFront.Hold(0);
       }
+      if ((abs(camera.ball_dir) < 15 && camera.ball_dis > 80) || sensors.hold_front == 1) {
+            ultrasonic.OnIrLed(1, 0, 0, 1);
+      } else {
+            ultrasonic.OffIrLed();
+      }
       if ((abs(camera.ball_dir) < 15 && camera.ball_dis > 50) || sensors.hold_front == 1) {
             defenseShootTimer.start();
       } else {
@@ -91,26 +95,26 @@ void DefenseMove() {
       }
 
       if (readms(defenseShootTimer) > BALL_WAIT_TIME || sensors.hold_front == 1) {
-            ultrasonic.OnIrLed(1, 0, 0, 1);
             if (sensors.hold_front == 1) {
                   if (sensors.ir_dis == 0 && readms(defenseShootTimer) > BALL_WAIT_TIME + 500) {
                         motor.Run(camera.ball_dir * 1.5, moving_speed, camera.ops_goal_dir);
-                        if (sensors.hold_front == 1 && readms(defenseShootTimer) > BALL_WAIT_TIME + 1000) {
+                        if (sensors.hold_front == 1 && readms(defenseShootTimer) > BALL_WAIT_TIME + 2000) {
                               kicker.Kick();
                               defenseShootTimer.reset();
                               defenseShootTimer.stop();
                         }
                   } else {
-                        if (abs(sensors.ir_dir) < 15 && sensors.dis[0] < 30) {
+                        if (abs(sensors.ir_dir) < 5 && sensors.dis[0] < 30) {
+                              motor.Brake(100);
                               kicker.Kick();
                               defenseShootTimer.reset();
                               defenseShootTimer.stop();
                         }
-                        motor.Run(0, 0);
+                        motor.Run();
                   }
             } else {
                   motor.Run(camera.ball_dir * 2, 30);
-                  if (readms(defenseShootTimer) > BALL_WAIT_TIME + 2000) {
+                  if (readms(defenseShootTimer) > BALL_WAIT_TIME + 2500) {
                         defenseShootTimer.reset();
                         defenseShootTimer.stop();
                   }
@@ -136,18 +140,17 @@ void DefenseMove() {
                   defenseShootTimer.stop();
             }*/
       } else {
-            ultrasonic.OffIrLed();
             if (sensors.is_on_line == 1) {
                   LineTrace();
             } else {
                   defenseShootTimer.reset();
                   defenseShootTimer.stop();
 
-                  if (sensors.dis[2] < 15 && camera.own_goal_size > 40) {
+                  if (sensors.dis[2] < 10 && camera.own_goal_size > 80) {
                         motor.Run(0, moving_speed);
                   } else if (sensors.dis[2] < 15) {
                         motor.Run(-90 * abs(camera.own_x) / camera.own_x, 50);
-                  } else if (sensors.dis[2] < 40) {
+                  } else if (camera.own_goal_size > 30) {
                         motor.Run(camera.own_goal_dir, 50);
                   } else {
                         motor.Run(camera.own_goal_dir, moving_speed);

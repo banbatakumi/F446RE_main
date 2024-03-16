@@ -16,7 +16,7 @@
 #define MOTOR_3_DEGREE 315
 
 #define BASE_POWER 10
-#define ENCODER_GAIN 0.00005
+#define ENCODER_GAIN 0.00004
 #define MAX_ADD_POWER 75
 #define MIN_ADD_POWER 0
 
