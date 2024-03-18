@@ -33,6 +33,8 @@ class Cam {
       int16_t own_goal_dir;
       uint8_t own_goal_size;
 
+      int16_t enemy_dir;
+
       bool is_goal_front;
 
      private:

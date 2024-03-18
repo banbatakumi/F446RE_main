@@ -65,6 +65,7 @@ typedef struct {
       uint8_t ops_goal_size;
       int16_t own_goal_dir;
       uint8_t own_goal_size;
+      int16_t enemy_dir;
       bool is_goal_front;
       int16_t ball_x;
       int16_t ball_y;

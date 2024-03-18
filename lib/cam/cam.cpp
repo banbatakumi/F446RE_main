@@ -11,7 +11,7 @@ Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
 
 void Cam::Receive() {
       static uint8_t data_length;  // データの長さ
-      const uint8_t recv_data_num = 7;
+      const uint8_t recv_data_num = 8;
       static uint8_t recv_data[recv_data_num];
       uint8_t read_byte;
       serial.read(&read_byte, 1);
@@ -30,8 +30,8 @@ void Cam::Receive() {
                   yellow_goal_size = recv_data[3];
                   blue_goal_dir = recv_data[4] * 2 - 180;
                   blue_goal_size = recv_data[5];
-                  is_goal_front = recv_data[6];
-                  if (recv_data[6] == 1) {
+                  enemy_dir = recv_data[6];
+                  if (recv_data[7] == 1) {
                         if (goal_front_count > 15) {
                               is_goal_front = 1;
                         } else {
@@ -60,6 +60,8 @@ void Cam::Receive() {
                         own_goal_dir = SimplifyDeg(yellow_goal_dir + *own_dir);
                         own_goal_size = yellow_goal_size;
                   }
+
+                  if (enemy_dir != 0) enemy_dir = SimplifyDeg(enemy_dir - 45 + *own_dir);
             }
 
             data_length = 0;

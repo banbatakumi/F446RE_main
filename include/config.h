@@ -30,7 +30,7 @@ void ModeRun() {
             if (abs(robot_dir) > 70) robot_dir = 70 * (robot_dir / abs(robot_dir));
             if (sensors.is_on_line) {
                   motor.Run(sensors.line_inside_dir, line_moving_speed, robot_dir);
-            }else {
+            } else {
                   int16_t wrap_deg_addend;
                   // 角度
                   if (abs(camera.ball_dir) <= 30) {
@@ -58,8 +58,8 @@ void ModeRun() {
                   }
                   if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
                   motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
-                  if (sensors.hold_front) kicker.Kick();
             }
+            if(sensors.hold_front)kicker.Kick();
       }
 }
 
@@ -78,6 +78,7 @@ void GetSensors() {
       camera.ops_goal_size = cam.ops_goal_size;
       camera.own_goal_dir = cam.own_goal_dir;
       camera.own_goal_size = cam.own_goal_size;
+      camera.enemy_dir = cam.enemy_dir;
       camera.is_goal_front = cam.is_goal_front;
       camera.ball_x = cam.GetBallX();
       camera.ball_y = cam.GetBallY();
@@ -161,8 +162,8 @@ void Ui() {
                               send_byte_num = 1;
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
-                              int16_t debug_val_1 = own_dir;
-                              int16_t debug_val_2 = sensors.encoder_val[1];
+                              int16_t debug_val_1 = cam.enemy_dir;
+                              int16_t debug_val_2 = cam.is_goal_front;
                               uint8_t debug_val_3 = sensors.encoder_val[2];
                               uint8_t debug_val_4 = sensors.encoder_val[3];
 
