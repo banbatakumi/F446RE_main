@@ -15,11 +15,15 @@ Timer holdBackTimer;
 Timer lineStopTimer;
 Timer goToCenterTimer;
 Timer wrapTimer;
+Timer frontCurveShootTimer;
+Timer holdFrontTimer;
 
 bool is_pre_line_left = 0;
 bool is_pre_line_right = 0;
 bool is_pre_line = 0;
 bool enable_back_curve_shoot = 0;
+bool enable_front_curve_shoot = 0;
+bool enable_front_hide_move = 0;
 bool is_first_hold = 1;
 int16_t tmp_moving_dir, tmp_moving_speed, robot_dir;
 
@@ -45,7 +49,7 @@ void WrapToFront() {
       if (camera.ball_dis < 80) {
             tmp_moving_speed = moving_speed;
       } else if (readms(wrapTimer) > 100) {
-            tmp_moving_speed = 125 - camera.ball_dis;
+            tmp_moving_speed = 130 - camera.ball_dis + abs(camera.ball_dir);
       } else {
             tmp_moving_speed = abs(wrapDirPID.Get());
       }
@@ -86,12 +90,54 @@ void WrapToBack() {
       motor.Run(tmp_moving_dir, tmp_moving_speed);
 }
 
+void FrontCurveShoot() {
+      static bool face_to_goal = 0;
+      dribblerFront.Hold(HOLD_MAX_POWER);
+      frontCurveShootTimer.start();
+      if (abs(camera.ops_goal_dir - own_dir) < 10) {
+            if (face_to_goal == 0) {
+                  frontCurveShootTimer.reset();
+                  face_to_goal = 1;
+            }
+            motor.Free();
+            if (readms(frontCurveShootTimer) > 500) {
+                  frontCurveShootTimer.reset();
+                  frontCurveShootTimer.stop();
+                  dribblerFront.Brake();
+                  kicker.Kick();
+                  enable_front_curve_shoot = 0;
+            }
+      } else {
+            if (sensors.hold_front == 0) enable_front_curve_shoot = 0;
+            if (readms(frontCurveShootTimer) <= 1500) {
+                  motor.Run(0, 0, camera.ops_goal_dir * (readms(frontCurveShootTimer) / 1500.0f), 0, 25);
+            } else {
+                  motor.Run(0, 0, camera.ops_goal_dir, 0, 25);
+            }
+      }
+}
+
+void FrontHideMove() {
+      holdFrontTimer.start();
+      dribblerFront.Hold(HOLD_MAX_POWER);
+
+      if (sensors.hold_front == 1) holdFrontTimer.reset();
+      if (readms(holdFrontTimer) > 250 || abs(camera.ops_goal_dir) > 60) {
+            enable_front_hide_move = 0;
+            holdFrontTimer.reset();
+            holdFrontTimer.stop();
+      } else {
+            if (camera.own_x > 0) {
+                  tmp_moving_dir = (30 - camera.own_x) * 5;
+            } else {
+                  tmp_moving_dir = (-30 - camera.own_x) * 5;
+            }
+            motor.Run(tmp_moving_dir - own_dir, 30, camera.own_x > 0 ? 90 : -90, FRONT, 15);
+      }
+}
+
 void BackCureveShoot() {
       static int8_t shoot_dir;
-      if (is_first_hold == 1) {
-            motor.Brake(250);
-            is_first_hold = 0;
-      }
 
       dribblerBack.Hold(HOLD_MAX_POWER);
       holdBackTimer.start();
@@ -104,8 +150,8 @@ void BackCureveShoot() {
                   } else {
                         shoot_dir = camera.ops_goal_dir > 0 ? -1 : 1;
                   }
-            } else if (abs(own_dir) < 35) {
-                  motor.Run(0, 0, 45 * shoot_dir, BACK, 30);
+            } else if (abs(own_dir) < 45) {
+                  motor.Run(0, 0, 60 * shoot_dir, BACK, 30);
             } else if (abs(own_dir) < 135) {
                   motor.Run(0, 0, 160 * shoot_dir);
             } else {
@@ -160,7 +206,6 @@ void BackCureveShoot() {
 
 void HoldFrontMove() {
       if (camera.ops_goal_size > 15 && camera.is_goal_front == 1 && sensors.dis[0] > 15) {  // キッカーを打つ条件
-            motor.Free();
             dribblerFront.Brake();
             kicker.Kick();
       } else {
@@ -174,7 +219,13 @@ void HoldFrontMove() {
             if (IS_OPS_GOAL_FOUND) {
                   robot_dir = camera.ops_goal_dir;
                   if (abs(robot_dir) > 45) robot_dir = 45 * (abs(robot_dir) / robot_dir);
-                  if (abs(camera.ops_goal_dir) > 45) {
+                  if (camera.own_y < 0 && abs(camera.own_x) > 20) {
+                        enable_front_hide_move = 1;
+                  } else if (abs(camera.ops_goal_dir) > 70) {
+                        motor.Run(180, 25);
+                  } else if (abs(camera.ops_goal_dir) > 45) {
+                        enable_front_curve_shoot = 1;
+                  } else if (abs(camera.ops_goal_dir) > 45) {
                         tmp_moving_dir = camera.ops_goal_dir * 2.5;
                         if (abs(tmp_moving_dir) > 180) tmp_moving_dir = 180 * (abs(tmp_moving_dir) / tmp_moving_dir);
                         motor.Run(tmp_moving_dir - own_dir, 25, robot_dir, FRONT, 10);
@@ -184,7 +235,7 @@ void HoldFrontMove() {
                   } else {
                         if (sensors.dis[0] < 10) {
                               if (abs(own_dir) > 30) kicker.Kick();
-                              motor.Run(45 * (abs(robot_dir) / robot_dir) - own_dir, moving_speed, 45 * (abs(robot_dir) / robot_dir));
+                              motor.Run(45 * (abs(robot_dir) / robot_dir) - own_dir, 100, 45 * (abs(robot_dir) / robot_dir), FRONT);
                         } else {
                               if (sensors.dis[1] < 20 && sensors.dis[3] > 20) {
                                     tmp_moving_dir = -30;
@@ -212,6 +263,10 @@ void HoldFrontMove() {
 }
 
 void HoldBackMove() {
+      if (is_first_hold == 1) {
+            motor.Brake(100);
+            is_first_hold = 0;
+      }
       enable_back_curve_shoot = 1;
       /*
       dribblerBack.Hold(HOLD_MAX_POWER);
@@ -385,6 +440,10 @@ void OffenseMove() {
 
                   if (enable_back_curve_shoot == 1) {  // 後ろドリブラーのマカオシュート
                         BackCureveShoot();
+                  } else if (enable_front_curve_shoot == 1) {  // 後ろドリブラーのマカオシュート
+                        FrontCurveShoot();
+                  } else if (enable_front_hide_move == 1) {  // 後ろドリブラーのマカオシュート
+                        FrontHideMove();
                   } else if (holdFront.IsHold()) {  // 前に捕捉している時
                         HoldFrontMove();
                   } else if (holdBack.IsHold()) {  // 後ろに捕捉している時

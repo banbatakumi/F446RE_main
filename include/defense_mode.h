@@ -67,8 +67,8 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(camera.ball_dir) * 2.5;
-            if (abs(camera.ball_dir) < 10 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
+            tmp_moving_speed = abs(camera.ball_dir) * 5;
+            if (abs(camera.ball_dir) < 5 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Run(tmp_moving_dir, tmp_moving_speed);
       }
