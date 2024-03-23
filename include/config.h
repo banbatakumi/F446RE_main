@@ -33,8 +33,8 @@ void ModeRun() {
             } else {
                   int16_t wrap_deg_addend;
                   // 角度
-                  if (abs(camera.ball_dir) <= 30) {
-                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 10.0f);
+                  if (abs(camera.ball_dir) <= 45) {
+                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 22.5f);
                   } else {
                         wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
                   }
@@ -49,7 +49,9 @@ void ModeRun() {
                   // 速度
                   wrapDirPID.Compute(camera.ball_dir, 0);
 
-                  if (camera.ball_dis < 80) {
+                  if (camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 30) {
+                        tmp_moving_speed = 50;
+                  } else if (camera.ball_dis < 80) {
                         tmp_moving_speed = moving_speed;
                   } else if (readms(wrapTimer) > 100) {
                         tmp_moving_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
@@ -59,7 +61,7 @@ void ModeRun() {
                   if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
                   motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
             }
-            if(sensors.hold_front)kicker.Kick();
+            if (sensors.hold_front) kicker.Kick();
       }
 }
 

@@ -30,6 +30,9 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
 
       if (moving_speed > POWER_MAX_LIMIT) moving_speed = POWER_MAX_LIMIT;  // 指定速度が限界を超えていたときに補正
 
+      pre_moving_dir = moving_dir;
+      pre_moving_speed = moving_speed;
+
       // 角度とスピードを各モーターの値に変更
       power[0] = MySin(moving_dir - MOTOR_0_DEGREE) * moving_speed * -1;
       power[1] = MySin(moving_dir - MOTOR_1_DEGREE) * moving_speed * -1;
@@ -161,4 +164,11 @@ void Motor::Free() {
       motor_3_b = 0;
       motor_4_a = 0;
       motor_4_b = 0;
+}
+
+int16_t Motor::GetPreMovingDir() {
+      return pre_moving_dir;
+}
+int16_t Motor::GetPreMovingSpeed() {
+      return pre_moving_speed;
 }

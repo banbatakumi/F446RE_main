@@ -7,8 +7,8 @@
 #define IS_OPS_GOAL_FOUND (camera.ops_goal_size != 0)
 #define IS_OWN_GOAL_FOUND (camera.own_goal_size != 0)
 
-#define DEPTH_OF_WRAP 100.0f
-#define DISTORTION_OF_WRAP 2.5
+#define DEPTH_OF_WRAP 95.0f
+#define DISTORTION_OF_WRAP 2.0
 
 Timer CurveShootTimer;
 Timer holdBackTimer;
@@ -26,6 +26,10 @@ bool enable_front_curve_shoot = 0;
 bool enable_front_hide_move = 0;
 bool is_first_hold = 1;
 int16_t tmp_moving_dir, tmp_moving_speed, robot_dir;
+
+int16_t hide_robot_dir = 0;
+bool face_to_goal = 0;
+int16_t shoot_goal_dir = 0;
 
 void WrapToFront() {
       int16_t wrap_deg_addend;
@@ -46,10 +50,12 @@ void WrapToFront() {
       // 速度
       wrapDirPID.Compute(camera.ball_dir, 0);
 
-      if (camera.ball_dis < 80) {
+      if (camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 30) {
+            tmp_moving_speed = 50;
+      } else if (camera.ball_dis < 80) {
             tmp_moving_speed = moving_speed;
-      } else if (readms(wrapTimer) > 100) {
-            tmp_moving_speed = 130 - camera.ball_dis + abs(camera.ball_dir);
+      } else if (readms(wrapTimer) > 250) {
+            tmp_moving_speed = 125 - camera.ball_dis + abs(camera.ball_dir);
       } else {
             tmp_moving_speed = abs(wrapDirPID.Get());
       }
@@ -91,48 +97,70 @@ void WrapToBack() {
 }
 
 void FrontCurveShoot() {
-      static bool face_to_goal = 0;
+      if (shoot_goal_dir == 0) shoot_goal_dir = camera.ops_goal_dir > 0 ? 85 : -85;
       dribblerFront.Hold(HOLD_MAX_POWER);
       frontCurveShootTimer.start();
+      holdFrontTimer.start();
       if (abs(camera.ops_goal_dir - own_dir) < 10) {
             if (face_to_goal == 0) {
                   frontCurveShootTimer.reset();
                   face_to_goal = 1;
             }
             motor.Free();
-            if (readms(frontCurveShootTimer) > 500) {
+            if (readms(frontCurveShootTimer) > 250) {
                   frontCurveShootTimer.reset();
                   frontCurveShootTimer.stop();
+                  holdFrontTimer.reset();
+                  holdFrontTimer.stop();
                   dribblerFront.Brake();
                   kicker.Kick();
                   enable_front_curve_shoot = 0;
+                  shoot_goal_dir = 0;
+                  face_to_goal = 0;
             }
       } else {
-            if (sensors.hold_front == 0) enable_front_curve_shoot = 0;
-            if (readms(frontCurveShootTimer) <= 1500) {
-                  motor.Run(0, 0, camera.ops_goal_dir * (readms(frontCurveShootTimer) / 1500.0f), 0, 25);
+            if (sensors.hold_front == 1) holdFrontTimer.reset();
+            if (readms(holdFrontTimer) > 300) {
+                  frontCurveShootTimer.reset();
+                  frontCurveShootTimer.stop();
+                  holdFrontTimer.reset();
+                  holdFrontTimer.stop();
+                  dribblerFront.Brake();
+                  kicker.Kick();
+                  enable_front_curve_shoot = 0;
+                  shoot_goal_dir = 0;
+                  face_to_goal = 0;
+            }
+            if (readms(frontCurveShootTimer) <= 1000) {
+                  motor.Run(0, 0, shoot_goal_dir * (readms(frontCurveShootTimer) / 1000.0f), 0, 35);
             } else {
-                  motor.Run(0, 0, camera.ops_goal_dir, 0, 25);
+                  frontCurveShootTimer.reset();
             }
       }
 }
 
 void FrontHideMove() {
+      if (hide_robot_dir == 0) hide_robot_dir = camera.own_x > 0 ? 60 : -60;
       holdFrontTimer.start();
       dribblerFront.Hold(HOLD_MAX_POWER);
 
-      if (sensors.hold_front == 1) holdFrontTimer.reset();
-      if (readms(holdFrontTimer) > 250 || abs(camera.ops_goal_dir) > 60) {
-            enable_front_hide_move = 0;
-            holdFrontTimer.reset();
-            holdFrontTimer.stop();
-      } else {
-            if (camera.own_x > 0) {
-                  tmp_moving_dir = (30 - camera.own_x) * 5;
+      if (readms(holdFrontTimer) > 300 || abs(camera.ops_goal_dir) > 65) {
+            if (abs(own_dir) > 10 && readms(holdFrontTimer) <= 1500) {
+                  motor.Run(0, 0, hide_robot_dir * (1 - readms(holdFrontTimer) / 1500.0f), 0, 35);
             } else {
-                  tmp_moving_dir = (-30 - camera.own_x) * 5;
+                  enable_front_hide_move = 0;
+                  hide_robot_dir = 0;
+                  holdFrontTimer.reset();
+                  holdFrontTimer.stop();
             }
-            motor.Run(tmp_moving_dir - own_dir, 30, camera.own_x > 0 ? 90 : -90, FRONT, 15);
+      } else {
+            if (sensors.hold_front == 1) holdFrontTimer.reset();
+            if (hide_robot_dir > 0) {
+                  tmp_moving_dir = (35 - camera.own_x) * 3;
+            } else {
+                  tmp_moving_dir = (-35 - camera.own_x) * 3;
+            }
+            motor.Run(tmp_moving_dir - own_dir, 30, hide_robot_dir, FRONT, 10);
       }
 }
 
@@ -141,7 +169,7 @@ void BackCureveShoot() {
 
       dribblerBack.Hold(HOLD_MAX_POWER);
       holdBackTimer.start();
-      if ((camera.ops_goal_size > 30 && abs(camera.enemy_dir) < 5 && abs(camera.ops_goal_dir) < 45) || readms(CurveShootTimer) > 50) {
+      if ((camera.ops_goal_size > 35 && abs(camera.enemy_dir) < 5 && abs(camera.ops_goal_dir) < 45) || readms(CurveShootTimer) > 50) {
             CurveShootTimer.start();
             if (readms(CurveShootTimer) < 50) {
                   motor.Brake();
@@ -150,8 +178,8 @@ void BackCureveShoot() {
                   } else {
                         shoot_dir = camera.ops_goal_dir > 0 ? -1 : 1;
                   }
-            } else if (abs(own_dir) < 45) {
-                  motor.Run(0, 0, 60 * shoot_dir, BACK, 30);
+            } else if (abs(own_dir) < 40) {
+                  motor.Run(0, 0, 55 * shoot_dir, BACK, 30);
             } else if (abs(own_dir) < 135) {
                   motor.Run(0, 0, 160 * shoot_dir);
             } else {
@@ -164,13 +192,8 @@ void BackCureveShoot() {
       } else if (readms(holdBackTimer) < 250) {
             if (sensors.hold_back == 1) holdBackTimer.reset();
             if (camera.ops_goal_size >= 30) {
-                  if (camera.enemy_dir != 0) {
-                        tmp_moving_dir = 90 + (camera.ops_goal_size - 35) * 3;
-                        if (camera.enemy_dir < 0) tmp_moving_dir *= -1;
-                  } else {
-                        tmp_moving_dir = 90 + (camera.ops_goal_size - 35) * 3;
-                        if (camera.ops_goal_dir < 0) tmp_moving_dir *= -1;
-                  }
+                  tmp_moving_dir = 90 + (camera.ops_goal_size - 35) * 3;
+                  if (camera.ops_goal_dir < 0) tmp_moving_dir *= -1;
                   motor.Run(tmp_moving_dir, 30);
             } else {
                   motor.Run(camera.ops_goal_dir * 2, 30);
@@ -219,13 +242,13 @@ void HoldFrontMove() {
             if (IS_OPS_GOAL_FOUND) {
                   robot_dir = camera.ops_goal_dir;
                   if (abs(robot_dir) > 45) robot_dir = 45 * (abs(robot_dir) / robot_dir);
-                  if (camera.own_y < 0 && abs(camera.own_x) > 20) {
-                        enable_front_hide_move = 1;
-                  } else if (abs(camera.ops_goal_dir) > 70) {
-                        motor.Run(180, 25);
-                  } else if (abs(camera.ops_goal_dir) > 45) {
-                        enable_front_curve_shoot = 1;
-                  } else if (abs(camera.ops_goal_dir) > 45) {
+                  // if (camera.own_y < 0 && abs(camera.own_x) > 35) {
+                  //       enable_front_hide_move = 1;
+                  // } else if (abs(camera.ops_goal_dir) > 65) {
+                  //       motor.Run(180, 25);
+                  // } else if (abs(camera.ops_goal_dir) > 50) {
+                  //       enable_front_curve_shoot = 1;
+                  if (abs(camera.ops_goal_dir) > 45) {
                         tmp_moving_dir = camera.ops_goal_dir * 2.5;
                         if (abs(tmp_moving_dir) > 180) tmp_moving_dir = 180 * (abs(tmp_moving_dir) / tmp_moving_dir);
                         motor.Run(tmp_moving_dir - own_dir, 25, robot_dir, FRONT, 10);
@@ -235,7 +258,7 @@ void HoldFrontMove() {
                   } else {
                         if (sensors.dis[0] < 10) {
                               if (abs(own_dir) > 30) kicker.Kick();
-                              motor.Run(45 * (abs(robot_dir) / robot_dir) - own_dir, 100, 45 * (abs(robot_dir) / robot_dir), FRONT);
+                              motor.Run(0, 100, 45 * (abs(robot_dir) / robot_dir), FRONT, 25);
                         } else {
                               if (sensors.dis[1] < 20 && sensors.dis[3] > 20) {
                                     tmp_moving_dir = -30;
@@ -300,8 +323,8 @@ void LineMove() {
             line_vector_rate = 0.4;
             ball_vector_rate = 0.6;
       } else {  // 通常待機
-            line_vector_rate = 0.7;
-            ball_vector_rate = 0.3;
+            line_vector_rate = 0.6;
+            ball_vector_rate = 0.4;
       }
 
       vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * line_vector_rate;
@@ -350,7 +373,7 @@ void LineMove() {
                   dribblerBack.Hold(0);
             }
             if (sensors.is_on_line == 1) {
-                  tmp_moving_speed = vector_mag * 10;
+                  tmp_moving_speed = vector_mag * 7.5;
                   robot_dir = 0;
                   robot_dir = camera.ball_dir + own_dir;
                   if (abs(camera.ball_dir + own_dir) < 120) {
@@ -399,7 +422,7 @@ void goToCenter() {
 }
 
 void OffenseMove() {
-      if (sensors.is_on_line == 1 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {  // ラインセンサの処理
+      if (sensors.is_on_line == 1 || ((sensors.is_line_left == 1 || sensors.is_line_right == 1) && motor.GetPreMovingSpeed() > 50 && abs(motor.GetPreMovingDir()) > 45 && abs(motor.GetPreMovingDir()) < 135)) {  // ラインセンサの処理
             LineMove();
       } else if (camera.ball_dis == 0) {  // ボールがない時の処理
             goToCenterTimer.start();
@@ -448,12 +471,12 @@ void OffenseMove() {
                         HoldFrontMove();
                   } else if (holdBack.IsHold()) {  // 後ろに捕捉している時
                         HoldBackMove();
-                  } else if (sensors.ir_dis != 0) {
-                        dribblerBack.Hold();
-                        tmp_moving_dir = atan2(camera.ball_x, camera.ball_y + 30) * 180.0f / PI;
-                        tmp_moving_speed = abs(camera.inverse_ball_dir) * 3 + abs(sqrt(pow(camera.ball_x, 2) + pow(camera.ball_y + 30, 2))) * 3;
-                        if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-                        motor.Run(tmp_moving_dir, tmp_moving_speed);
+                        //} else if (sensors.ir_dis != 0) {
+                        //      dribblerBack.Hold();
+                        //      tmp_moving_dir = atan2(camera.ball_x, camera.ball_y + 30) * 180.0f / PI;
+                        //    tmp_moving_speed = abs(camera.inverse_ball_dir) * 3 + abs(sqrt(pow(camera.ball_x, 2) + pow(camera.ball_y + 30, 2))) * 3;
+                        //      if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+                        //      motor.Run(tmp_moving_dir, tmp_moving_speed);
                   } else {
                         is_first_hold = 1;
                         if (IS_BALL_NEAR_OF_FRONT) {

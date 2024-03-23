@@ -10,7 +10,7 @@ Kicker::Kicker(PinName sig_1_, PinName sig_2_) : sig_1(sig_1_), sig_2(sig_2_) {
 }
 
 void Kicker::Kick() {
-      if (readms(chargeTimer) > 500) {
+      if (readms(chargeTimer) > 750) {
             if (enable == 0) {
                   ChargeTimeout.attach(mbed::callback(this, &Kicker::ChargeOff), CHARGE_OFF_TIME);
                   FlipTimeout.attach(mbed::callback(this, &Kicker::FlipOff), KICK_TIME);

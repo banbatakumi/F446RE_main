@@ -34,6 +34,8 @@ class Motor {
       void SetAttitudeControlPID(float kp_, float ki_, float kd_);
       void Brake(uint16_t brake_time_ = 0);
       void Free();
+      int16_t GetPreMovingDir();
+      int16_t GetPreMovingSpeed();
 
 #define FRONT 1
 #define RIGHT 2
@@ -60,6 +62,9 @@ class Motor {
       PwmOut motor_4_b;
 
       int16_t* own_dir;
+
+      int16_t pre_moving_dir;
+      int16_t pre_moving_speed;
 
       Timer addPowerTimer;
 };

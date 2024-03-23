@@ -4,7 +4,7 @@
 
 #define IS_BALL_NEAR_OF_FRONT (abs(camera.ball_dir) < 30 && camera.ball_dis > 90)
 
-#define BALL_WAIT_TIME 2000
+#define BALL_WAIT_TIME 1500
 
 Timer defenseShootTimer;
 Timer backToCenterTimer;
@@ -25,7 +25,7 @@ void backToCenter() {
       vector_y = (12 - sensors.line_interval) * MyCos(sensors.line_dir) + sensors.line_interval * MyCos(almost_moving_dir);
 
       tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-      tmp_moving_speed = abs(camera.own_x) * 10;
+      tmp_moving_speed = abs(camera.own_x) * 5;
       if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
       motor.Run(tmp_moving_dir, tmp_moving_speed);
 }
@@ -67,8 +67,8 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(camera.ball_dir) * 5;
-            if (abs(camera.ball_dir) < 5 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
+            tmp_moving_speed = abs(camera.ball_x) * 12.5;
+            if (abs(camera.ball_dir) < 2 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Run(tmp_moving_dir, tmp_moving_speed);
       }
@@ -104,13 +104,13 @@ void DefenseMove() {
                               defenseShootTimer.stop();
                         }
                   } else {
-                        if (abs(sensors.ir_dir) < 5 && sensors.dis[0] < 30) {
+                        if (abs(sensors.ir_dir) < 10 && sensors.dis[0] < 30) {
                               motor.Brake(100);
                               kicker.Kick();
                               defenseShootTimer.reset();
                               defenseShootTimer.stop();
                         }
-                        motor.Run();
+                        motor.Run(0, 0, sensors.ir_dir, FRONT, 20);
                   }
             } else {
                   motor.Run(camera.ball_dir * 2, 30);
@@ -146,9 +146,9 @@ void DefenseMove() {
                   defenseShootTimer.reset();
                   defenseShootTimer.stop();
 
-                  if (sensors.dis[2] < 10 && camera.own_goal_size > 80) {
+                  if (camera.own_goal_size > 75) {
                         motor.Run(0, moving_speed);
-                  } else if (sensors.dis[2] < 15) {
+                  } else if (sensors.dis[2] < 10) {
                         motor.Run(-90 * abs(camera.own_x) / camera.own_x, 50);
                   } else if (camera.own_goal_size > 30) {
                         motor.Run(camera.own_goal_dir, 50);
