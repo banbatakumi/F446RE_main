@@ -4,7 +4,7 @@
 
 #define IS_BALL_NEAR_OF_FRONT (abs(sensors.ir_dir) < 30 && sensors.ir_dis > 90)
 
-#define BALL_WAIT_TIME 2000
+#define BALL_WAIT_TIME 1500
 #define GO_TO_GOAL_TIME 1000
 
 Timer defenseShootTimer;
@@ -67,7 +67,7 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(sensors.ir_dir);
+            tmp_moving_speed = abs(sensors.ir_dir) * 1.5;
             if (abs(sensors.ir_dir) < 10) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Run(tmp_moving_dir, tmp_moving_speed);
@@ -110,7 +110,7 @@ void DefenseMove() {
                   defenseShootTimer.reset();
                   defenseShootTimer.stop();
 
-                  if (sensors.dis[2] < 15 && camera.own_goal_size > 40) {
+                  if (camera.own_goal_size > 75) {
                         motor.Run(0, moving_speed);
                   } else if (sensors.dis[2] < 15) {
                         motor.Run(-90 * abs(camera.own_x) / camera.own_x, 50);

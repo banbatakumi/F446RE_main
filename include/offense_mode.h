@@ -39,7 +39,7 @@ void WrapToFront() {
       } else {
             wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
       }
-      tmp_moving_dir = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
+      tmp_moving_dir = SimplifyDeg(camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP)));
 
       if (abs(camera.ball_dir) < 10) wrapTimer.start();
       if (abs(camera.ball_dir) > 30) {
@@ -50,12 +50,12 @@ void WrapToFront() {
       // 速度
       wrapDirPID.Compute(camera.ball_dir, 0);
 
-      if (camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 30) {
-            tmp_moving_speed = 50;
-      } else if (camera.ball_dis < 80) {
+      if (camera.ball_dis < 80) {
             tmp_moving_speed = moving_speed;
       } else if (readms(wrapTimer) > 250) {
             tmp_moving_speed = 125 - camera.ball_dis + abs(camera.ball_dir);
+      } else if ((camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 45) || (camera.own_goal_size > 40 && abs(tmp_moving_dir) > 135) || (camera.own_x > 25 && tmp_moving_dir > 45 && tmp_moving_dir < 135) || (camera.own_x < -25 && tmp_moving_dir < -45 && tmp_moving_dir > -135)) {
+            tmp_moving_speed = 50;
       } else {
             tmp_moving_speed = abs(wrapDirPID.Get());
       }

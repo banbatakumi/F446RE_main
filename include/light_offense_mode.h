@@ -40,10 +40,10 @@ void WrapToFront() {
       // 速度
       wrapDirPID.Compute(sensors.ir_dir, 0);
 
-      if (sensors.ir_dis < 80) {
+      if (sensors.ir_dis < 80 || readms(wrapTimer) > 100) {
             tmp_moving_speed = moving_speed;
-      } else if (readms(wrapTimer) > 250) {
-            tmp_moving_speed = abs(sensors.ir_dir) + 125 - sensors.ir_dis;
+      } else if ((camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 45) || (camera.own_goal_size > 40 && abs(tmp_moving_dir) > 135) || (camera.own_x > 30 && tmp_moving_dir > 45 && tmp_moving_dir < 135) || (camera.own_x < -30 && tmp_moving_dir < -45 && tmp_moving_dir > -135)) {
+            tmp_moving_speed = 50;
       } else {
             tmp_moving_speed = abs(wrapDirPID.Get());
       }
@@ -52,7 +52,7 @@ void WrapToFront() {
 
       if (abs(sensors.ir_dir) < 30 && sensors.ir_dis > 80) {
             robot_dir = camera.ops_goal_dir;
-            if (abs(robot_dir) > 45) robot_dir = 45 * (abs(robot_dir) / robot_dir);
+            if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
       } else {
             robot_dir = 0;
       }
@@ -72,8 +72,8 @@ void LineMove() {
             line_vector_rate = 0.4;
             ball_vector_rate = 0.6;
       } else {  // 通常待機
-            line_vector_rate = 0.7;
-            ball_vector_rate = 0.3;
+            line_vector_rate = 0.6;
+            ball_vector_rate = 0.4;
       }
 
       vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * line_vector_rate;
@@ -151,7 +151,7 @@ void goToCenter() {
 }
 
 void OffenseMove() {
-      if (sensors.is_on_line == 1 || sensors.is_line_left == 1 || sensors.is_line_right == 1) {  // ラインセンサの処理
+      if (sensors.is_on_line == 1 || ((sensors.is_line_left == 1 || sensors.is_line_right == 1) && motor.GetPreMovingSpeed() > 50 && abs(motor.GetPreMovingDir()) > 45 && abs(motor.GetPreMovingDir()) < 135)) {  // ラインセンサの処理
             LineMove();
       } else if (sensors.ir_dis == 0) {  // ボールがない時の処理
             goToCenterTimer.start();
@@ -170,9 +170,9 @@ void OffenseMove() {
             }
             goToCenterTimer.reset();
 
-            if (is_pre_line_left == 1 && readms(lineStopTimer) < 250) {  // 左のラインセンサから復帰後一定時間コート内に戻る
+            if (is_pre_line_left == 1 && readms(lineStopTimer) < 100) {  // 左のラインセンサから復帰後一定時間コート内に戻る
                   motor.Run(90, line_moving_speed);
-            } else if (is_pre_line_right == 1 && readms(lineStopTimer) < 250) {  // 右のラインセンサから復帰後一定時間コート内に戻る
+            } else if (is_pre_line_right == 1 && readms(lineStopTimer) < 100) {  // 右のラインセンサから復帰後一定時間コート内に戻る
                   motor.Run(-90, line_moving_speed);
             } else if (is_pre_line == 1 && readms(lineStopTimer) < 100) {  // エンジェルラインセンサから復帰後一定時間コート内に戻る
                   motor.Run();
@@ -181,11 +181,8 @@ void OffenseMove() {
                   is_pre_line_right = 0;
                   is_pre_line = 0;
 
-                  if (holdFront.IsHold()) {
-                        kicker.Kick();
-                  } else {
-                        WrapToFront();
-                  }
+                  if (holdFront.IsHold()) kicker.Kick();
+                  WrapToFront();
             }
       }
 }
