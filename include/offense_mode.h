@@ -7,7 +7,7 @@
 #define IS_OPS_GOAL_FOUND (camera.ops_goal_size != 0)
 #define IS_OWN_GOAL_FOUND (camera.own_goal_size != 0)
 
-#define DEPTH_OF_WRAP 95.0f
+#define DEPTH_OF_WRAP 100.0f
 #define DISTORTION_OF_WRAP 2.0
 
 Timer CurveShootTimer;

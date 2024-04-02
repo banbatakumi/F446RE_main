@@ -8,15 +8,19 @@ class Imu {
      public:
       Imu(PinName tx_, PinName rx_, uint32_t serial_baud_);
 
-      int16_t GetDir();
-      void SetZero();
+      float GetYaw();
+      float GetPitch();
+      float GetRoll();
+      void YawSetZero();
 
      private:
       UnbufferedSerial serial;
       void Receive();
 
-      int16_t dir;
-      int16_t dir_correction;
+      float yaw;
+      float pitch;
+      float roll;
+      float yaw_correction;
 };
 
 #endif

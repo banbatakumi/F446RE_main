@@ -8,15 +8,19 @@ Imu::Imu(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_) {
 }
 
 void Imu::Receive() {
-      static uint8_t data_length;   // データの長さ
-      const uint8_t recv_data_num = 2;
+      static uint8_t data_length;  // データの長さ
+      const uint8_t recv_data_num = 6;
       static uint8_t recv_data[recv_data_num];
       static uint8_t read_byte;
-      static uint8_t dir_plus;
-      static uint8_t dir_minus;
+      static uint8_t yaw_H;
+      static uint8_t yaw_L;
+      static uint8_t pitch_H;
+      static uint8_t pitch_L;
+      static uint8_t roll_H;
+      static uint8_t roll_L;
       serial.read(&read_byte, 1);
 
-      if (data_length == 0) {   // ヘッダの受信
+      if (data_length == 0) {  // ヘッダの受信
             if (read_byte == 0xFF) {
                   data_length++;
             } else {
@@ -24,10 +28,17 @@ void Imu::Receive() {
             }
       } else if (data_length == recv_data_num + 1) {
             if (read_byte == 0xAA) {
-                  dir_plus = recv_data[0];
-                  dir_minus = recv_data[1];
+                  yaw_H = recv_data[0];
+                  yaw_L = recv_data[1];
+                  pitch_H = recv_data[2];
+                  pitch_L = recv_data[3];
+                  roll_H = recv_data[4];
+                  roll_L = recv_data[5];
 
-                  dir = SimplifyDeg((dir_plus == 0 ? dir_minus * -1 : dir_plus) - dir_correction);
+                  yaw = ((((uint16_t)yaw_H << 8) & 0xFF00) | ((int16_t)yaw_L & 0x00FF)) * 0.1 - 180;
+                  pitch = ((((uint16_t)pitch_H << 8) & 0xFF00) | ((int16_t)pitch_L & 0x00FF)) * 0.1 - 180;
+                  roll = ((((uint16_t)roll_H << 8) & 0xFF00) | ((int16_t)roll_L & 0x00FF)) * 0.1 - 180;
+                  yaw = SimplifyDegFloat(yaw - yaw_correction);
             }
 
             data_length = 0;
@@ -37,10 +48,16 @@ void Imu::Receive() {
       }
 }
 
-int16_t Imu::GetDir() {
-      return dir;
+float Imu::GetYaw() {
+      return yaw;
+}
+float Imu::GetPitch() {
+      return pitch;
+}
+float Imu::GetRoll() {
+      return roll;
 }
 
-void Imu::SetZero() {
-      dir_correction += dir;
+void Imu::YawSetZero() {
+      yaw_correction += yaw;
 }

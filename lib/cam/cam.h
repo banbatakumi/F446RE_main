@@ -9,7 +9,7 @@
 
 class Cam {
      public:
-      Cam(PinName tx_, PinName rx_, int16_t* own_dir_);
+      Cam(PinName tx_, PinName rx_, float* own_dir_);
 
       int16_t GetBallX();
       int16_t GetBallY();
@@ -41,7 +41,7 @@ class Cam {
       UnbufferedSerial serial;
       void Receive();
 
-      int16_t* own_dir;
+      float* own_dir;
       int16_t* mode;
 
       bool is_front_goal_yellow;

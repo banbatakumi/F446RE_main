@@ -1,6 +1,7 @@
 #ifndef MBED_MOTOR_H
 #define MBED_MOTOR_H
 
+#include "FastPWM.h"
 #include "mbed.h"
 #include "moving_ave.h"
 #include "pid.h"
@@ -28,7 +29,7 @@
 #define readus(timer_name_) (timer_name_).elapsed_time().count()
 class Motor {
      public:
-      Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t* own_dir_);
+      Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, float* own_dir_);
       void Run(int16_t moving_dir_ = 0, uint16_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t turning_mode_ = 0, uint8_t turning_limit_ = 100);
       void SetPwmPeriod(uint16_t pwm_period_);
       void SetAttitudeControlPID(float kp_, float ki_, float kd_);
@@ -52,16 +53,25 @@ class Motor {
 
       PID attitudeControlPID;
 
-      PwmOut motor_1_a;
-      PwmOut motor_1_b;
-      PwmOut motor_2_a;
-      PwmOut motor_2_b;
-      PwmOut motor_3_a;
-      PwmOut motor_3_b;
-      PwmOut motor_4_a;
-      PwmOut motor_4_b;
+      FastPWM motor_1_a;
+      FastPWM motor_1_b;
+      FastPWM motor_2_a;
+      FastPWM motor_2_b;
+      FastPWM motor_3_a;
+      FastPWM motor_3_b;
+      FastPWM motor_4_a;
+      FastPWM motor_4_b;
+      /*
+            PwmOut motor_1_a;
+            PwmOut motor_1_b;
+            PwmOut motor_2_a;
+            PwmOut motor_2_b;
+            PwmOut motor_3_a;
+            PwmOut motor_3_b;
+            PwmOut motor_4_a;
+            PwmOut motor_4_b;*/
 
-      int16_t* own_dir;
+      float* own_dir;
 
       int16_t pre_moving_dir;
       int16_t pre_moving_speed;

@@ -67,7 +67,7 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(sensors.ir_dir) * 1.5;
+            tmp_moving_speed = abs(sensors.ir_dir) * 2;
             if (abs(sensors.ir_dir) < 10) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Run(tmp_moving_dir, tmp_moving_speed);

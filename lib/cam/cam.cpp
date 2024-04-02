@@ -2,7 +2,7 @@
 
 #include "mbed.h"
 
-Cam::Cam(PinName tx_, PinName rx_, int16_t* own_dir_) : serial(tx_, rx_) {
+Cam::Cam(PinName tx_, PinName rx_, float* own_dir_) : serial(tx_, rx_) {
       serial.baud(115200);
       serial.attach(callback(this, &Cam::Receive), SerialBase::RxIrq);
 

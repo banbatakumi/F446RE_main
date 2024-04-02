@@ -17,7 +17,7 @@
 #define PI 3.1415926535  // 円周率
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 9600
+#define UI_UART_SPEED 57600
 
 #define HOLD_MAX_POWER 100
 #define HOLD_WAIT_POWER 90
@@ -29,7 +29,9 @@ uint8_t mode = 0;
 uint8_t moving_speed;
 uint8_t line_moving_speed;
 
-int16_t own_dir;
+float own_dir;
+float pitch;
+float roll;
 
 // UART通信定義 (TX, RX)
 UnbufferedSerial uiSerial(PC_10, PC_11);

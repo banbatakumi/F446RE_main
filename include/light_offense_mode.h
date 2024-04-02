@@ -24,8 +24,8 @@ int16_t tmp_moving_dir, tmp_moving_speed, robot_dir;
 void WrapToFront() {
       int16_t wrap_deg_addend;
       // 角度
-      if (abs(sensors.ir_dir) < 30) {
-            wrap_deg_addend = sensors.ir_dir * (abs(sensors.ir_dir) / 10.0f);
+      if (abs(sensors.ir_dir) < 45) {
+            wrap_deg_addend = sensors.ir_dir * (abs(sensors.ir_dir) / 22.5f);
       } else {
             wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
       }
@@ -50,13 +50,6 @@ void WrapToFront() {
 
       if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
 
-      if (abs(sensors.ir_dir) < 30 && sensors.ir_dis > 80) {
-            robot_dir = camera.ops_goal_dir;
-            if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
-      } else {
-            robot_dir = 0;
-      }
-
       motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
 }
 
@@ -78,39 +71,31 @@ void LineMove() {
 
       vector_x = sensors.line_depth * MySin(sensors.line_inside_dir) * line_vector_rate;
       vector_y = sensors.line_depth * MyCos(sensors.line_inside_dir) * line_vector_rate;
-      vector_x += ((24 - sensors.line_depth) * MySin(sensors.ir_dir)) * ball_vector_rate;
-      vector_y += ((24 - sensors.line_depth) * MyCos(sensors.ir_dir)) * ball_vector_rate;
+      vector_x += ((24 - sensors.line_depth) * MySin(sensors.ir_dir * 1.5)) * ball_vector_rate;
+      vector_y += ((24 - sensors.line_depth) * MyCos(sensors.ir_dir * 1.5)) * ball_vector_rate;
       vector_dir = atan2(vector_x, vector_y) * 180.0f / PI;
       vector_mag = abs(sqrt(pow(vector_x, 2) + pow(vector_y, 2)));
 
       lineStopTimer.start();
       if (readms(lineStopTimer) < 100 || readms(lineStopTimer) > 5000 || sensors.ir_dis == 0) {
             if (sensors.is_on_line == 1) {
-                  motor.Run(sensors.line_inside_dir, line_moving_speed);
+                  motor.Run(sensors.line_inside_dir, line_moving_speed, robot_dir);
             } else if (sensors.is_line_left == 1) {
-                  motor.Run(90, line_moving_speed);
+                  motor.Run(90, line_moving_speed, robot_dir);
             } else if (sensors.is_line_right == 1) {
-                  motor.Run(-90, line_moving_speed);
+                  motor.Run(-90, line_moving_speed, robot_dir);
             }
       } else if (holdFront.IsHold()) {
             if (sensors.is_on_line == 1) {
-                  motor.Run(sensors.line_inside_dir, 25, 0, FRONT, 15);
+                  motor.Run(sensors.line_inside_dir, 25, robot_dir);
             } else if (sensors.is_line_left == 1) {
-                  motor.Run(90, 25, 0, FRONT, 15);
+                  motor.Run(90, 25, robot_dir);
             } else if (sensors.is_line_right == 1) {
-                  motor.Run(-90, 25, 0, FRONT, 15);
-            }
-      } else if (holdBack.IsHold()) {
-            if (sensors.is_on_line == 1) {
-                  motor.Run(sensors.line_inside_dir, 25, 0, BACK, 15);
-            } else if (sensors.is_line_left == 1) {
-                  motor.Run(90, 25, 0, BACK, 15);
-            } else if (sensors.is_line_right == 1) {
-                  motor.Run(-90, 25, 0, BACK, 15);
+                  motor.Run(-90, 25, robot_dir);
             }
       } else {
             if (sensors.is_on_line == 1) {
-                  tmp_moving_speed = vector_mag * 10;
+                  tmp_moving_speed = vector_mag * 7.5;
                   if (tmp_moving_speed > line_moving_speed) tmp_moving_speed = line_moving_speed;
                   motor.Run(vector_dir + own_dir, tmp_moving_speed);
             } else if (sensors.is_line_left == 1) {
@@ -151,6 +136,8 @@ void goToCenter() {
 }
 
 void OffenseMove() {
+      robot_dir = camera.ops_goal_dir;
+      if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
       if (sensors.is_on_line == 1 || ((sensors.is_line_left == 1 || sensors.is_line_right == 1) && motor.GetPreMovingSpeed() > 50 && abs(motor.GetPreMovingDir()) > 45 && abs(motor.GetPreMovingDir()) < 135)) {  // ラインセンサの処理
             LineMove();
       } else if (sensors.ir_dis == 0) {  // ボールがない時の処理

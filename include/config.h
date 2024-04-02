@@ -26,6 +26,7 @@ void ModeRun() {
       } else if (mode == 2) {
             DefenseMove();
       } else if (mode == 3) {
+            /*
             robot_dir = camera.ops_goal_dir;
             if (abs(robot_dir) > 70) robot_dir = 70 * (robot_dir / abs(robot_dir));
             if (sensors.is_on_line) {
@@ -33,35 +34,36 @@ void ModeRun() {
             } else {
                   int16_t wrap_deg_addend;
                   // 角度
-                  if (abs(camera.ball_dir) <= 45) {
-                        wrap_deg_addend = camera.ball_dir * (abs(camera.ball_dir) / 22.5f);
+                  if (abs(sensors.ir_dir) <= 45) {
+                        wrap_deg_addend = sensors.ir_dir * 2;
                   } else {
-                        wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
+                        wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
                   }
-                  int16_t tmp_moving_dir = camera.ball_dir + (wrap_deg_addend * pow((camera.ball_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
+                  int16_t tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend * pow((sensors.ir_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
 
-                  if (abs(camera.ball_dir) < 10) wrapTimer.start();
-                  if (abs(camera.ball_dir) > 30) {
+                  if (abs(sensors.ir_dir) < 10) wrapTimer.start();
+                  if (abs(sensors.ir_dir) > 30) {
                         wrapTimer.reset();
                         wrapTimer.stop();
                   }
 
                   // 速度
-                  wrapDirPID.Compute(camera.ball_dir, 0);
+                  wrapDirPID.Compute(sensors.ir_dir, 0);
 
                   if (camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 30) {
                         tmp_moving_speed = 50;
-                  } else if (camera.ball_dis < 80) {
+                  } else if (sensors.ir_dis < 80) {
                         tmp_moving_speed = moving_speed;
                   } else if (readms(wrapTimer) > 100) {
-                        tmp_moving_speed = abs(camera.ball_dir) + 125 - camera.ball_dis;
+                        tmp_moving_speed = abs(sensors.ir_dir) + 125 - sensors.ir_dis;
                   } else {
                         tmp_moving_speed = abs(wrapDirPID.Get());
                   }
                   if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
                   motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
             }
-            if (sensors.hold_front) kicker.Kick();
+            if (sensors.hold_front) kicker.Kick();*/
+            motor.Run();
       }
 }
 
@@ -109,7 +111,9 @@ void GetSensors() {
       sensors.line_dir = line.dir;
       sensors.line_depth = line.GetDepth();
 
-      own_dir = imu.GetDir();
+      own_dir = imu.GetYaw();
+      pitch = imu.GetPitch();
+      roll = imu.GetRoll();
 }
 
 void Ui() {
@@ -148,7 +152,7 @@ void Ui() {
                   }
 
                   if (mode == 0 || mode == 3) {
-                        if (is_own_dir_correction == 1 && mode == 0) imu.SetZero();
+                        if (is_own_dir_correction == 1 && mode == 0) imu.YawSetZero();
                         if (item == 4) {
                               ultrasonic.OnIrLed();
                         } else {
@@ -178,8 +182,8 @@ void Ui() {
                               send_byte[6] = debug_val_4;
                         } else if (item == 1) {
                               send_byte_num = 3;
-                              send_byte[1] = own_dir > 0 ? own_dir : 0;
-                              send_byte[2] = own_dir < 0 ? own_dir * -1 : 0;
+                              send_byte[1] = (uint8_t)(((uint16_t)(own_dir * 10 + 1800) & 0xFF00) >> 8);
+                              send_byte[2] = (uint8_t)((uint16_t)(own_dir * 10 + 1800) & 0x00FF);
                         } else if (item == 2) {
                               send_byte_num = 5;
                               send_byte[1] = sensors.line_dir / 2 + 90;

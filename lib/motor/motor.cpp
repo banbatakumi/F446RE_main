@@ -2,7 +2,7 @@
 
 #include "mbed.h"
 
-Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, int16_t *own_dir_)
+Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, float *own_dir_)
     : motor_1_a(motor_1_a_), motor_1_b(motor_1_b_), motor_2_a(motor_2_a_), motor_2_b(motor_2_b_), motor_3_a(motor_3_a_), motor_3_b(motor_3_b_), motor_4_a(motor_4_a_), motor_4_b(motor_4_b_) {
       motor_1_a = 0;
       motor_1_b = 0;

@@ -5,7 +5,7 @@
 void setup() {
       // UART初期設定
       uiSerial.baud(UI_UART_SPEED);
-      // uiSerial.attach(&Ui, Serial::RxIrq);
+      //uiSerial.attach(&Ui, SerialBase::RxIrq);
 
       // モーター
       motor.SetPwmPeriod(25);                      // 5us:200kHz, 10us:100kHz, 20us:50kHz, 100us:10kHz, 1000us:1kHz
