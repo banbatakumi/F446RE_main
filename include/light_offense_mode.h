@@ -50,7 +50,7 @@ void WrapToFront() {
 
       if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
 
-      motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
+      motor.Drive(tmp_moving_dir, tmp_moving_speed, robot_dir);
 }
 
 void LineMove() {
@@ -79,36 +79,36 @@ void LineMove() {
       lineStopTimer.start();
       if (readms(lineStopTimer) < 100 || readms(lineStopTimer) > 5000 || sensors.ir_dis == 0) {
             if (sensors.is_on_line == 1) {
-                  motor.Run(sensors.line_inside_dir, line_moving_speed, robot_dir);
+                  motor.Drive(sensors.line_inside_dir, line_moving_speed, robot_dir);
             } else if (sensors.is_line_left == 1) {
-                  motor.Run(90, line_moving_speed, robot_dir);
+                  motor.Drive(90, line_moving_speed, robot_dir);
             } else if (sensors.is_line_right == 1) {
-                  motor.Run(-90, line_moving_speed, robot_dir);
+                  motor.Drive(-90, line_moving_speed, robot_dir);
             }
       } else if (holdFront.IsHold()) {
             if (sensors.is_on_line == 1) {
-                  motor.Run(sensors.line_inside_dir, 25, robot_dir);
+                  motor.Drive(sensors.line_inside_dir, 25, robot_dir);
             } else if (sensors.is_line_left == 1) {
-                  motor.Run(90, 25, robot_dir);
+                  motor.Drive(90, 25, robot_dir);
             } else if (sensors.is_line_right == 1) {
-                  motor.Run(-90, 25, robot_dir);
+                  motor.Drive(-90, 25, robot_dir);
             }
       } else {
             if (sensors.is_on_line == 1) {
                   tmp_moving_speed = vector_mag * 7.5;
                   if (tmp_moving_speed > line_moving_speed) tmp_moving_speed = line_moving_speed;
-                  motor.Run(vector_dir + own_dir, tmp_moving_speed);
+                  motor.Drive(vector_dir + own_dir, tmp_moving_speed);
             } else if (sensors.is_line_left == 1) {
                   if (SimplifyDeg(sensors.ir_dir + own_dir) < 0) {
-                        motor.Run(-90, 50);
+                        motor.Drive(-90, 50);
                   } else {
-                        motor.Run(90, 50);
+                        motor.Drive(90, 50);
                   }
             } else if (sensors.is_line_right == 1) {
                   if (SimplifyDeg(sensors.ir_dir + own_dir) > 0) {
-                        motor.Run(90, 50);
+                        motor.Drive(90, 50);
                   } else {
-                        motor.Run(-90, 50);
+                        motor.Drive(-90, 50);
                   }
             }
       }
@@ -129,9 +129,9 @@ void goToCenter() {
                         tmp_moving_dir = -135;
                   }
             }
-            motor.Run(tmp_moving_dir, abs(sensors.dis[0] - sensors.dis[2]) + abs(sensors.dis[1] - sensors.dis[3]));
+            motor.Drive(tmp_moving_dir, abs(sensors.dis[0] - sensors.dis[2]) + abs(sensors.dis[1] - sensors.dis[3]));
       } else {
-            motor.Run(camera.center_dir, camera.center_dis * 10);
+            motor.Drive(camera.center_dir, camera.center_dis * 10);
       }
 }
 
@@ -145,7 +145,7 @@ void OffenseMove() {
             if (readms(goToCenterTimer) > 1000) {
                   goToCenter();
             } else {
-                  motor.Run();
+                  motor.Drive();
             }
       } else {
             if (readms(lineStopTimer) > 500) {
@@ -158,11 +158,11 @@ void OffenseMove() {
             goToCenterTimer.reset();
 
             if (is_pre_line_left == 1 && readms(lineStopTimer) < 100) {  // 左のラインセンサから復帰後一定時間コート内に戻る
-                  motor.Run(90, line_moving_speed);
+                  motor.Drive(90, line_moving_speed);
             } else if (is_pre_line_right == 1 && readms(lineStopTimer) < 100) {  // 右のラインセンサから復帰後一定時間コート内に戻る
-                  motor.Run(-90, line_moving_speed);
+                  motor.Drive(-90, line_moving_speed);
             } else if (is_pre_line == 1 && readms(lineStopTimer) < 100) {  // エンジェルラインセンサから復帰後一定時間コート内に戻る
-                  motor.Run();
+                  motor.Drive();
             } else {
                   is_pre_line_left = 0;
                   is_pre_line_right = 0;

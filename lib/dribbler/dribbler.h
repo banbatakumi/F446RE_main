@@ -3,6 +3,7 @@
 
 #include "mbed.h"
 #include "moving_ave.h"
+#include "FastPWM.h"
 class Dribbler {
      public:
       Dribbler(PinName motor_a_, PinName motor_b_);
@@ -16,7 +17,7 @@ class Dribbler {
 
      private:
       MovingAve motorAve;
-      PwmOut motor_a;
+      FastPWM motor_a;
       DigitalOut motor_b;
 };
 

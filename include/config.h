@@ -26,44 +26,50 @@ void ModeRun() {
       } else if (mode == 2) {
             DefenseMove();
       } else if (mode == 3) {
+            // int16_t center_dir = SimplifyDeg(atan2(camera.own_x, camera.own_y) * 180.0f / PI - 180);
+            // int16_t center_dis = abs(sqrt(pow(camera.own_x, 2) + pow(camera.own_y, 2)));
+            // motor.Drive(center_dir, center_dis * 3);
             /*
-            robot_dir = camera.ops_goal_dir;
-            if (abs(robot_dir) > 70) robot_dir = 70 * (robot_dir / abs(robot_dir));
-            if (sensors.is_on_line) {
-                  motor.Run(sensors.line_inside_dir, line_moving_speed, robot_dir);
+            if (camera.own_x > 20 && camera.own_y > 40) {
+                  motor.Drive(-135, line_moving_speed);
+            } else if (camera.own_x > 20 && camera.own_y < -30) {
+                  motor.Drive(-45, line_moving_speed);
+            } else if (camera.own_x < -25 && camera.own_y < -30) {
+                  motor.Drive(45, line_moving_speed);
+            } else if (camera.own_x < -25 && camera.own_y > 40) {
+                  motor.Drive(135, line_moving_speed);
+            } else if (camera.own_x > 20) {
+                  motor.Drive(-90, line_moving_speed);
+            } else if (camera.own_x < -25) {
+                  motor.Drive(90, line_moving_speed);
+            } else if (camera.own_y > 40) {
+                  motor.Drive(180, line_moving_speed);
+            } else if (camera.own_y < -30) {
+                  motor.Drive(0, line_moving_speed);
             } else {
-                  int16_t wrap_deg_addend;
-                  // 角度
-                  if (abs(sensors.ir_dir) <= 45) {
-                        wrap_deg_addend = sensors.ir_dir * 2;
-                  } else {
-                        wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
-                  }
-                  int16_t tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend * pow((sensors.ir_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
+            }*/
 
-                  if (abs(sensors.ir_dir) < 10) wrapTimer.start();
-                  if (abs(sensors.ir_dir) > 30) {
-                        wrapTimer.reset();
-                        wrapTimer.stop();
-                  }
-
-                  // 速度
-                  wrapDirPID.Compute(sensors.ir_dir, 0);
-
-                  if (camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 30) {
-                        tmp_moving_speed = 50;
-                  } else if (sensors.ir_dis < 80) {
-                        tmp_moving_speed = moving_speed;
-                  } else if (readms(wrapTimer) > 100) {
-                        tmp_moving_speed = abs(sensors.ir_dir) + 125 - sensors.ir_dis;
-                  } else {
-                        tmp_moving_speed = abs(wrapDirPID.Get());
-                  }
-                  if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-                  motor.Run(tmp_moving_dir, tmp_moving_speed, robot_dir);
+            int16_t wrap_deg_addend;
+            // 角度
+            if (abs(camera.ball_dir) <= 60) {
+                  wrap_deg_addend = camera.ball_dir * 1.5;
+                  if (abs(camera.ball_dir) < 30) wrap_deg_addend *= abs(camera.ball_dir) / 30.0f;
+            } else {
+                  wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
             }
-            if (sensors.hold_front) kicker.Kick();*/
-            motor.Run();
+            tmp_moving_dir = SimplifyDeg(camera.ball_dir + (wrap_deg_addend * pow(((200 - camera.ball_dis) / DEPTH_OF_WRAP), DISTORTION_OF_WRAP)));
+
+            // 速度
+            if (camera.ball_dir > 0) {
+                  tmp_moving_speed = abs(camera.ball_dir) + (camera.ball_velocity_x + 4) * 10;
+            } else {
+                  tmp_moving_speed = abs(camera.ball_dir) - (camera.ball_velocity_x - 4) * 10;
+            }
+            tmp_moving_speed += camera.ball_dis / 4;
+
+            if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+
+            motor.Drive(tmp_moving_dir, tmp_moving_speed);
       }
 }
 
@@ -86,6 +92,8 @@ void GetSensors() {
       camera.is_goal_front = cam.is_goal_front;
       camera.ball_x = cam.GetBallX();
       camera.ball_y = cam.GetBallY();
+      camera.ball_velocity_x = cam.GetBallVelocityX();
+      camera.ball_velocity_y = cam.GetBallVelocityY();
       camera.own_x = cam.GetOwnX();
       camera.own_y = cam.GetOwnY();
       camera.center_dir = cam.GetCenterDir();
@@ -124,7 +132,7 @@ void Ui() {
       static bool is_own_dir_correction = 0;
 
       static uint8_t data_length;
-      const uint8_t recv_data_num = 7;
+      const uint8_t recv_data_num = 5;
       static uint8_t recv_data[recv_data_num];
       uint8_t read_byte;
       uiSerial.read(&read_byte, 1);
@@ -138,12 +146,12 @@ void Ui() {
       } else if (data_length == recv_data_num + 1) {
             if (read_byte == 0xAA) {
                   item = recv_data[0] - 127;
-                  sub_item = recv_data[1];
-                  mode = recv_data[2];
-                  is_own_dir_correction = recv_data[3];
-                  moving_speed = recv_data[4];
-                  line_moving_speed = recv_data[5];
-                  dribbler_sig = recv_data[6];
+                  sub_item = recv_data[1] >> 4;
+                  mode = recv_data[1] & 0b00001111;
+                  is_own_dir_correction = recv_data[2] >> 4;
+                  dribbler_sig = recv_data[2] & 0b00001111;
+                  moving_speed = recv_data[3];
+                  line_moving_speed = recv_data[4];
 
                   if (mode != 0 || item == 2) {
                         line.LedOn();
@@ -168,22 +176,26 @@ void Ui() {
                               send_byte_num = 1;
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
-                              int16_t debug_val_1 = cam.enemy_dir;
-                              int16_t debug_val_2 = cam.is_goal_front;
-                              uint8_t debug_val_3 = sensors.encoder_val[2];
-                              uint8_t debug_val_4 = sensors.encoder_val[3];
+                              int16_t debug_val[4];
+                              debug_val[0] = tmp_moving_dir;
+                              debug_val[1] = tmp_moving_speed;
+                              debug_val[2] = camera.own_x;
+                              debug_val[3] = camera.own_y;
 
-                              send_byte_num = 7;
+                              send_byte_num = 10;
                               send_byte[1] = uint8_t(voltage.Get() * 20);
-                              send_byte[2] = debug_val_1 > 0 ? debug_val_1 : 0;
-                              send_byte[3] = debug_val_1 < 0 ? debug_val_1 * -1 : 0;
-                              send_byte[4] = debug_val_2;
-                              send_byte[5] = debug_val_3;
-                              send_byte[6] = debug_val_4;
+                              send_byte[2] = (uint8_t)(((uint16_t)(own_dir + 32768) & 0xFF00) >> 8);
+                              send_byte[3] = (uint8_t)((uint16_t)(own_dir + 32768) & 0x00FF);
+                              send_byte[4] = (uint8_t)(((uint16_t)(debug_val[0] + 32768) & 0xFF00) >> 8);
+                              send_byte[5] = (uint8_t)((uint16_t)(debug_val[0] + 32768) & 0x00FF);
+                              send_byte[6] = (uint8_t)(((uint16_t)(debug_val[1] + 32768) & 0xFF00) >> 8);
+                              send_byte[7] = (uint8_t)((uint16_t)(debug_val[1] + 32768) & 0x00FF);
+                              send_byte[8] = (uint8_t)(debug_val[2]);
+                              send_byte[9] = (uint8_t)(debug_val[3]);
                         } else if (item == 1) {
                               send_byte_num = 3;
-                              send_byte[1] = (uint8_t)(((uint16_t)(own_dir * 10 + 1800) & 0xFF00) >> 8);
-                              send_byte[2] = (uint8_t)((uint16_t)(own_dir * 10 + 1800) & 0x00FF);
+                              send_byte[1] = (uint8_t)(((uint16_t)(own_dir + 32768) & 0xFF00) >> 8);
+                              send_byte[2] = (uint8_t)((uint16_t)(own_dir + 32768) & 0x00FF);
                         } else if (item == 2) {
                               send_byte_num = 5;
                               send_byte[1] = sensors.line_dir / 2 + 90;
@@ -192,9 +204,11 @@ void Ui() {
                               send_byte[4] = sensors.is_on_line << 2 | sensors.is_line_left << 1 | sensors.is_line_right;
                         } else if (item == 3) {
                               if (sub_item == 1) {
-                                    send_byte_num = 3;
+                                    send_byte_num = 5;
                                     send_byte[1] = camera.ball_dir / 2 + 90;
                                     send_byte[2] = camera.ball_dis;
+                                    send_byte[3] = camera.ball_velocity_x + 127;
+                                    send_byte[4] = camera.ball_velocity_y + 127;
                               } else if (sub_item == 2) {
                                     send_byte_num = 5;
                                     send_byte[1] = camera.y_goal_dir / 2 + 90;

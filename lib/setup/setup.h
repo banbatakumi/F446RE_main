@@ -17,10 +17,10 @@
 #define PI 3.1415926535  // 円周率
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 57600
+#define UI_UART_SPEED 9600
 
 #define HOLD_MAX_POWER 100
-#define HOLD_WAIT_POWER 90
+#define HOLD_WAIT_POWER 50
 
 #define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
@@ -40,8 +40,6 @@ void Ui();
 
 void GetSensors();
 
-PID wrapDirPID;
-
 Voltage voltage(PA_4);
 Motor motor(PB_14, PB_15, PB_2, PB_10, PB_5, PB_3, PC_6, PC_8, &own_dir);
 Dribbler dribblerFront(PB_6, PB_7);
@@ -49,10 +47,10 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Ultrasonic ultrasonic(PC_12, PD_2, 115200);  // TX, RX
-Cam cam(PA_0, PA_1, &own_dir);
+Ultrasonic ultrasonic(PC_12, PD_2, 57600);  // TX, RX
+Cam cam(PA_0, PA_1, &own_dir, 230400);
 Imu imu(PA_9, PA_10, 115200);
-Line line(PA_2, PA_3);
+Line line(PA_2, PA_3, 230400);
 
 DigitalOut led[2] = {PA_5, PA_6};
 typedef struct {
@@ -71,6 +69,8 @@ typedef struct {
       bool is_goal_front;
       int16_t ball_x;
       int16_t ball_y;
+      int16_t ball_velocity_x;
+      int16_t ball_velocity_y;
       int16_t own_x;
       int16_t own_y;
       int16_t center_dir;

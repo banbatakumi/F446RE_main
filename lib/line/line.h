@@ -8,7 +8,7 @@
 
 class Line {
      public:
-      Line(PinName tx_, PinName rx_);
+      Line(PinName tx_, PinName rx_, uint32_t serial_baud_);
 
       uint8_t EncoderVal(uint8_t which_sensor_);
       void LedOn();

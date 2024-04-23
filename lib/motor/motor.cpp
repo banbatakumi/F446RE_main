@@ -23,7 +23,7 @@ Motor::Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName
       addPowerTimer.start();
 }
 
-void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle_, uint8_t turning_mode_, uint8_t turning_limit_) {
+void Motor::Drive(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle_, uint8_t turning_mode_, uint8_t turning_limit_) {
       int16_t power[MOTOR_QTY];
       uint8_t moving_speed = moving_speed_;
       int16_t moving_dir = SimplifyDeg(moving_dir_);
@@ -106,7 +106,7 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
       }
 
       for (uint8_t i = 0; i < MOTOR_QTY; i++) {
-            if (corrected_power[i] > POWER_MAX_LIMIT) corrected_power[i] = POWER_MAX_LIMIT * (abs(corrected_power[i]) / corrected_power[i]);
+            if (abs(corrected_power[i]) > POWER_MAX_LIMIT) corrected_power[i] = POWER_MAX_LIMIT * (abs(corrected_power[i]) / corrected_power[i]);
       }
 
       // 移動平均フィルタ
@@ -115,15 +115,18 @@ void Motor::Run(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_angle
       motor3Ave.Compute(&corrected_power[2]);
       motor4Ave.Compute(&corrected_power[3]);
 
-      // モーターへ出力
-      motor_1_a = abs(corrected_power[0]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[0] > 0 ? corrected_power[0] * 0.01f : 0);
-      motor_1_b = abs(corrected_power[0]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[0] < 0 ? corrected_power[0] * -0.01f : 0);
-      motor_2_a = abs(corrected_power[1]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[1] > 0 ? corrected_power[1] * 0.01f : 0);
-      motor_2_b = abs(corrected_power[1]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[1] < 0 ? corrected_power[1] * -0.01f : 0);
-      motor_3_a = abs(corrected_power[2]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[2] > 0 ? corrected_power[2] * 0.01f : 0);
-      motor_3_b = abs(corrected_power[2]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[2] < 0 ? corrected_power[2] * -0.01f : 0);
-      motor_4_a = abs(corrected_power[3]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[3] > 0 ? corrected_power[3] * 0.01f : 0);
-      motor_4_b = abs(corrected_power[3]) <= POWER_MIN_LIMIT ? 1 : (corrected_power[3] < 0 ? corrected_power[3] * -0.01f : 0);
+      Run(corrected_power[0], corrected_power[1], corrected_power[2], corrected_power[3]);
+}
+
+void Motor::Run(int8_t power_1, int8_t power_2, int8_t power_3, int8_t power_4) {
+      motor_1_a = abs(power_1) <= POWER_MIN_LIMIT ? 1 : (power_1 > 0 ? power_1 * 0.01f : 0);
+      motor_1_b = abs(power_1) <= POWER_MIN_LIMIT ? 1 : (power_1 < 0 ? power_1 * -0.01f : 0);
+      motor_2_a = abs(power_2) <= POWER_MIN_LIMIT ? 1 : (power_2 > 0 ? power_2 * 0.01f : 0);
+      motor_2_b = abs(power_2) <= POWER_MIN_LIMIT ? 1 : (power_2 < 0 ? power_2 * -0.01f : 0);
+      motor_3_a = abs(power_3) <= POWER_MIN_LIMIT ? 1 : (power_3 > 0 ? power_3 * 0.01f : 0);
+      motor_3_b = abs(power_3) <= POWER_MIN_LIMIT ? 1 : (power_3 < 0 ? power_3 * -0.01f : 0);
+      motor_4_a = abs(power_4) <= POWER_MIN_LIMIT ? 1 : (power_4 > 0 ? power_4 * 0.01f : 0);
+      motor_4_b = abs(power_4) <= POWER_MIN_LIMIT ? 1 : (power_4 < 0 ? power_4 * -0.01f : 0);
 }
 
 void Motor::SetPwmPeriod(uint16_t pwm_period_) {

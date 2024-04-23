@@ -28,7 +28,7 @@ void backToCenter() {
       tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
       tmp_moving_speed = abs(camera.own_x) * 10;
       if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-      motor.Run(tmp_moving_dir, tmp_moving_speed);
+      motor.Drive(tmp_moving_dir, tmp_moving_speed);
 }
 
 void LineTrace() {
@@ -51,26 +51,26 @@ void LineTrace() {
       vector_y = (12 - sensors.line_interval) * MyCos(sensors.line_dir) + sensors.line_interval * MyCos(ball_almost_angle);
 
       if (abs(sensors.line_dir) > 60 && abs(sensors.line_dir) < 120) {
-            motor.Run(0, 50);
+            motor.Drive(0, 50);
       } else if (sensors.ir_dis == 0) {
             backToCenterTimer.start();
             if (readms(backToCenterTimer) > 1000) {
                   backToCenter();
             } else {
-                  motor.Run();
+                  motor.Drive();
             }
 
       } else if ((sensors.line_dir > 90 && sensors.line_dir < 135 && sensors.ir_dir < 0) || (sensors.line_dir < -90 && sensors.line_dir > -135 && sensors.ir_dir > 0)) {
             tmp_moving_speed = (12 - sensors.line_interval) * 5;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-            motor.Run(sensors.line_dir, tmp_moving_speed);
+            motor.Drive(sensors.line_dir, tmp_moving_speed);
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
             tmp_moving_speed = abs(sensors.ir_dir) * 2;
             if (abs(sensors.ir_dir) < 10) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-            motor.Run(tmp_moving_dir, tmp_moving_speed);
+            motor.Drive(tmp_moving_dir, tmp_moving_speed);
       }
 }
 
@@ -86,16 +86,16 @@ void DefenseMove() {
             if (readms(defenseShootTimer) < BALL_WAIT_TIME + GO_TO_GOAL_TIME) {
                   if (readms(defenseShootTimer) > 2250) {
                         if (sensors.is_on_line == 1) {
-                              motor.Run(sensors.line_inside_dir, line_moving_speed);
+                              motor.Drive(sensors.line_inside_dir, line_moving_speed);
                         } else if (sensors.is_line_left == 1) {
-                              motor.Run(90, line_moving_speed);
+                              motor.Drive(90, line_moving_speed);
                         } else if (sensors.is_line_right == 1) {
-                              motor.Run(-90, line_moving_speed);
+                              motor.Drive(-90, line_moving_speed);
                         } else {
-                              motor.Run(sensors.ir_dir * 1.5, moving_speed, camera.ops_goal_dir);
+                              motor.Drive(sensors.ir_dir * 1.5, moving_speed, camera.ops_goal_dir);
                         }
                   } else {
-                        motor.Run(sensors.ir_dir * 1.5, moving_speed, camera.ops_goal_dir);
+                        motor.Drive(sensors.ir_dir * 1.5, moving_speed, camera.ops_goal_dir);
                   }
                   if (sensors.hold_front == 1 && readms(defenseShootTimer) > 2500) kicker.Kick();
             } else {
@@ -111,13 +111,13 @@ void DefenseMove() {
                   defenseShootTimer.stop();
 
                   if (camera.own_goal_size > 75) {
-                        motor.Run(0, moving_speed);
+                        motor.Drive(0, moving_speed);
                   } else if (sensors.dis[2] < 15) {
-                        motor.Run(-90 * abs(camera.own_x) / camera.own_x, 50);
+                        motor.Drive(-90 * abs(camera.own_x) / camera.own_x, 50);
                   } else if (sensors.dis[2] < 40) {
-                        motor.Run(camera.own_goal_dir, 50);
+                        motor.Drive(camera.own_goal_dir, 50);
                   } else {
-                        motor.Run(camera.own_goal_dir, moving_speed);
+                        motor.Drive(camera.own_goal_dir, moving_speed);
                   }
             }
       }

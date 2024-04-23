@@ -21,16 +21,17 @@
 #define MAX_ADD_POWER 75
 #define MIN_ADD_POWER 0
 
-#define POWER_MAX_LIMIT 95
+#define POWER_MAX_LIMIT 99
 #define POWER_MIN_LIMIT 1
 
-#define MOVING_AVE_NUM 25
+#define MOVING_AVE_NUM 50
 
 #define readus(timer_name_) (timer_name_).elapsed_time().count()
 class Motor {
      public:
       Motor(PinName motor_1_a_, PinName motor_1_b_, PinName motor_2_a_, PinName motor_2_b_, PinName motor_3_a_, PinName motor_3_b_, PinName motor_4_a_, PinName motor_4_b_, float* own_dir_);
-      void Run(int16_t moving_dir_ = 0, uint16_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t turning_mode_ = 0, uint8_t turning_limit_ = 100);
+      void Drive(int16_t moving_dir_ = 0, uint16_t moving_speed_ = 0, int16_t robot_angle_ = 0, uint8_t turning_mode_ = 0, uint8_t turning_limit_ = 100);
+      void Run(int8_t power_1, int8_t power_2, int8_t power_3, int8_t power_4);
       void SetPwmPeriod(uint16_t pwm_period_);
       void SetAttitudeControlPID(float kp_, float ki_, float kd_);
       void Brake(uint16_t brake_time_ = 0);
@@ -61,15 +62,6 @@ class Motor {
       FastPWM motor_3_b;
       FastPWM motor_4_a;
       FastPWM motor_4_b;
-      /*
-            PwmOut motor_1_a;
-            PwmOut motor_1_b;
-            PwmOut motor_2_a;
-            PwmOut motor_2_b;
-            PwmOut motor_3_a;
-            PwmOut motor_3_b;
-            PwmOut motor_4_a;
-            PwmOut motor_4_b;*/
 
       float* own_dir;
 

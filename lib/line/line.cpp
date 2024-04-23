@@ -2,8 +2,8 @@
 
 #include "mbed.h"
 
-Line::Line(PinName tx_, PinName rx_) : serial(tx_, rx_) {
-      serial.baud(230400);
+Line::Line(PinName tx_, PinName rx_, uint32_t serial_baud_) : serial(tx_, rx_) {
+      serial.baud(serial_baud_);
       serial.attach(callback(this, &Line::Receive), SerialBase::RxIrq);
 }
 
