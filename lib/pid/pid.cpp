@@ -32,7 +32,7 @@ void PID::Compute(float input_, float target_) {
                   d = (p - pre_p) / (readms(sampling_timer) / 1000.0f);       // 微分
                   i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) / 2;  // 積分
                   if ((i > 0 && input_ > 0) || (i < 0 && input_ < 0)) i = 0;
-                  if (i > limit) i = limit * (i / abs(i));
+                  if (abs(i) > limit) i = limit * (i / abs(i));
                   pre_p = p;
 
                   pid = p * kp + i * ki + d * kd;
@@ -41,7 +41,7 @@ void PID::Compute(float input_, float target_) {
                   d = (input_ - pre_input) / (readms(sampling_timer) / 1000.0f);  // 微分
                   i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) / 2;      // 積分
                   if ((i > 0 && input_ > 0) || (i < 0 && input_ < 0)) i = 0;
-                  if (i > limit) i = limit * (i / abs(i));
+                  if (abs(i) > limit) i = limit * (i / abs(i));
                   pre_p = p;
                   pre_input = input_;
 
