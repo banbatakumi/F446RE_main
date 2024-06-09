@@ -3,6 +3,7 @@
 
 #include "cam.h"
 #include "dribbler.h"
+#include "esp32.h"
 #include "hold.h"
 #include "imu.h"
 #include "kicker.h"
@@ -11,16 +12,15 @@
 #include "motor.h"
 #include "pid.h"
 #include "simplify_deg.h"
-#include "ultrasonic.h"
 #include "voltage.h"
 
 #define PI 3.1415926535  // 円周率
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 9600
+#define UI_UART_SPEED 57600
 
 #define HOLD_MAX_POWER 100
-#define HOLD_WAIT_POWER 50
+#define HOLD_WAIT_POWER 75
 
 #define readms(timer_name_) chrono::duration_cast<chrono::milliseconds>((timer_name_).elapsed_time()).count()
 
@@ -47,7 +47,7 @@ Dribbler dribblerBack(PB_8, PB_9);
 Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
-Ultrasonic ultrasonic(PC_12, PD_2, 57600);  // TX, RX
+Esp32 esp32(PC_12, PD_2, &own_dir, &mode, 115200);  // TX, RX
 Cam cam(PA_0, PA_1, &own_dir, 230400);
 Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3, 230400);
@@ -78,7 +78,6 @@ typedef struct {
 } type_camera;
 
 typedef struct {
-      uint8_t dis[4];
       uint8_t encoder_val[4];
       int16_t ir_dir;
       uint8_t ir_dis;
@@ -93,7 +92,16 @@ typedef struct {
       bool hold_back;
 } type_sensors;
 
+typedef struct {
+      bool is_ally_moving;
+      bool is_ally_defense;
+      bool is_ally_catch_ball;
+      bool can_ally_get_pass;
+      bool is_connect_to_ally;
+} type_bt;
+
 type_camera camera;
 type_sensors sensors;
+type_bt bt;
 
 #endif

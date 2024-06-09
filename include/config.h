@@ -18,18 +18,23 @@ void ModeRun() {
 
       GetSensors();
       if (uiSerial.readable()) Ui();
+      esp32.is_catch_ball = sensors.hold_front | sensors.hold_back;
 
       if (mode == 0) {
             motor.Free();
+            esp32.is_defense = 0;
+            esp32.can_get_pass = 0;
       } else if (mode == 1) {
             OffenseMove();
+            esp32.is_defense = 0;
       } else if (mode == 2) {
             DefenseMove();
+            esp32.is_defense = 1;
       } else if (mode == 3) {
             // int16_t center_dir = SimplifyDeg(atan2(camera.own_x, camera.own_y) * 180.0f / PI - 180);
             // int16_t center_dis = abs(sqrt(pow(camera.own_x, 2) + pow(camera.own_y, 2)));
             // motor.Drive(center_dir, center_dis * 3);
-            /*
+
             if (camera.own_x > 20 && camera.own_y > 40) {
                   motor.Drive(-135, line_moving_speed);
             } else if (camera.own_x > 20 && camera.own_y < -30) {
@@ -46,30 +51,29 @@ void ModeRun() {
                   motor.Drive(180, line_moving_speed);
             } else if (camera.own_y < -30) {
                   motor.Drive(0, line_moving_speed);
-            } else {
-            }*/
+            } else {  // 速度
+                  int16_t wrap_deg_addend;
+                  // 角度
+                  if (abs(camera.ball_dir) <= 60) {
+                        wrap_deg_addend = camera.ball_dir * 1.5;
+                        if (abs(camera.ball_dir) < 20) wrap_deg_addend *= abs(camera.ball_dir) / 20.0f;
+                  } else {
+                        wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
+                  }
+                  tmp_moving_dir = SimplifyDeg(camera.ball_dir + (wrap_deg_addend * pow(((200 - camera.ball_dis) / DEPTH_OF_WRAP), DISTORTION_OF_WRAP)));
 
-            int16_t wrap_deg_addend;
-            // 角度
-            if (abs(camera.ball_dir) <= 60) {
-                  wrap_deg_addend = camera.ball_dir * 1.5;
-                  if (abs(camera.ball_dir) < 30) wrap_deg_addend *= abs(camera.ball_dir) / 30.0f;
-            } else {
-                  wrap_deg_addend = 90 * (abs(camera.ball_dir) / camera.ball_dir);
+                  // 速度
+                  if (camera.ball_dir > 0) {
+                        tmp_moving_speed = abs(camera.ball_dir) + (cam.ball_velocity_x + 3) * 5;
+                  } else {
+                        tmp_moving_speed = abs(camera.ball_dir) - (cam.ball_velocity_x - 3) * 5;
+                  }
+                  tmp_moving_speed += camera.ball_dis / 4;
+
+                  if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+
+                  motor.Drive(tmp_moving_dir, tmp_moving_speed);
             }
-            tmp_moving_dir = SimplifyDeg(camera.ball_dir + (wrap_deg_addend * pow(((200 - camera.ball_dis) / DEPTH_OF_WRAP), DISTORTION_OF_WRAP)));
-
-            // 速度
-            if (camera.ball_dir > 0) {
-                  tmp_moving_speed = abs(camera.ball_dir) + (camera.ball_velocity_x + 4) * 10;
-            } else {
-                  tmp_moving_speed = abs(camera.ball_dir) - (camera.ball_velocity_x - 4) * 10;
-            }
-            tmp_moving_speed += camera.ball_dis / 4;
-
-            if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
-
-            motor.Drive(tmp_moving_dir, tmp_moving_speed);
       }
 }
 
@@ -99,12 +103,8 @@ void GetSensors() {
       camera.center_dir = cam.GetCenterDir();
       camera.center_dis = cam.GetCenterDis();
 
-      sensors.dis[0] = ultrasonic.val[0];
-      sensors.dis[1] = ultrasonic.val[1];
-      sensors.dis[2] = ultrasonic.val[2];
-      sensors.dis[3] = ultrasonic.val[3];
-      sensors.ir_dir = ultrasonic.ir_dir;
-      sensors.ir_dis = ultrasonic.ir_dis;
+      sensors.ir_dir = esp32.ir_dir;
+      sensors.ir_dis = esp32.ir_dis;
       sensors.hold_front = holdFront.IsHold();
       sensors.hold_back = holdBack.IsHold();
       sensors.is_line_left = line.is_left;
@@ -118,6 +118,12 @@ void GetSensors() {
       sensors.line_inside_dir = line.inside_dir;
       sensors.line_dir = line.dir;
       sensors.line_depth = line.GetDepth();
+
+      bt.is_connect_to_ally = esp32.is_connect_to_ally;
+      bt.is_ally_catch_ball = esp32.is_ally_catch_ball;
+      bt.is_ally_defense = esp32.is_ally_defense;
+      bt.is_ally_moving = esp32.is_ally_moving;
+      bt.can_ally_get_pass = esp32.can_ally_get_pass;
 
       own_dir = imu.GetYaw();
       pitch = imu.GetPitch();
@@ -162,9 +168,9 @@ void Ui() {
                   if (mode == 0 || mode == 3) {
                         if (is_own_dir_correction == 1 && mode == 0) imu.YawSetZero();
                         if (item == 4) {
-                              ultrasonic.OnIrLed();
+                              esp32.OnIrLed();
                         } else {
-                              ultrasonic.OffIrLed();
+                              esp32.OffIrLed();
                         }
 
                         // 送信
@@ -177,10 +183,10 @@ void Ui() {
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
                               int16_t debug_val[4];
-                              debug_val[0] = tmp_moving_dir;
-                              debug_val[1] = tmp_moving_speed;
-                              debug_val[2] = camera.own_x;
-                              debug_val[3] = camera.own_y;
+                              debug_val[0] = bt.is_connect_to_ally;
+                              debug_val[1] = bt.is_ally_moving;
+                              debug_val[2] = bt.is_ally_defense;
+                              debug_val[3] = bt.is_ally_catch_ball;
 
                               send_byte_num = 10;
                               send_byte[1] = uint8_t(voltage.Get() * 20);
@@ -226,12 +232,6 @@ void Ui() {
                               send_byte_num = 3;
                               send_byte[1] = sensors.ir_dir / 2 + 90;
                               send_byte[2] = sensors.ir_dis;
-                        } else if (item == 5) {
-                              send_byte_num = 5;
-                              send_byte[1] = sensors.dis[0];
-                              send_byte[2] = sensors.dis[1];
-                              send_byte[3] = sensors.dis[2];
-                              send_byte[4] = sensors.dis[3];
                         }
                         uiSerial.write(&send_byte, send_byte_num);
                   }
