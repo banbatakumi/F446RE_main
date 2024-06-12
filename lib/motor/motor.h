@@ -17,14 +17,14 @@
 #define MOTOR_3_DEGREE 315
 
 #define BASE_POWER 10
-#define ENCODER_GAIN 0.00005
+#define ENCODER_GAIN 0.00007
 #define MAX_ADD_POWER 50
 #define MIN_ADD_POWER 0
 
 #define POWER_MAX_LIMIT 99
 #define POWER_MIN_LIMIT 1
 
-#define MOVING_AVE_NUM 50
+#define MOVING_AVE_NUM 30
 
 #define readus(timer_name_) (timer_name_).elapsed_time().count()
 class Motor {

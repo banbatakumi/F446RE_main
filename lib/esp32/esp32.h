@@ -13,6 +13,8 @@ class Esp32 {
       void Receive();
       void OnIrLed();
       void OffIrLed();
+      void TopYawSetZero();
+      void EnableRorate(bool enable_ = 1);
 
       uint8_t val[SENSOR_QTY];
       int16_t ir_dir;
@@ -26,6 +28,7 @@ class Esp32 {
       bool is_defense;
       bool is_catch_ball;
       bool can_get_pass;
+      char pc_command;
 
      private:
       UnbufferedSerial serial;
@@ -35,6 +38,8 @@ class Esp32 {
       uint8_t* mode;
 
       int16_t top_yaw;
+      bool do_top_yaw_correction;
+      bool enable_rorate;
 };
 
 #endif

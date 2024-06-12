@@ -2,9 +2,9 @@
 #define _DEFENSE_MODE_H_
 #include "setup.h"
 
-#define IS_BALL_NEAR_OF_FRONT (abs(camera.ball_dir) < 30 && camera.ball_dis > 90)
+#define IS_BALL_NEAR_OF_FRONT (abs(camera.ball_dir) < 30 && camera.ball_dis < 15)
 
-#define BALL_WAIT_TIME 1500
+#define BALL_WAIT_TIME 500
 
 Timer defenseShootTimer;
 Timer backToCenterTimer;
@@ -67,7 +67,7 @@ void LineTrace() {
       } else {
             backToCenterTimer.reset();
             tmp_moving_dir = atan2(vector_x, vector_y) * 180.0f / PI;
-            tmp_moving_speed = abs(camera.ball_x) * 7.5;
+            tmp_moving_speed = abs(camera.ball_x) * 5;
             if (abs(camera.ball_dir) < 2 || abs(camera.ball_dir) > 120) tmp_moving_speed = 0;
             if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
             motor.Drive(tmp_moving_dir, tmp_moving_speed);
@@ -82,12 +82,7 @@ void DefenseMove() {
       } else {
             dribblerFront.Hold(0);
       }
-      if ((abs(camera.ball_dir) < 15 && camera.ball_dis > 80) || sensors.hold_front == 1) {
-            esp32.OnIrLed();
-      } else {
-            esp32.OffIrLed();
-      }
-      if ((abs(camera.ball_dir) < 15 && camera.ball_dis > 50) || sensors.hold_front == 1) {
+      if ((abs(camera.ball_dir) < 15 && camera.ball_dis < 50) || sensors.hold_front == 1) {
             defenseShootTimer.start();
       } else {
             defenseShootTimer.reset();
@@ -96,49 +91,36 @@ void DefenseMove() {
 
       if (readms(defenseShootTimer) > BALL_WAIT_TIME || sensors.hold_front == 1) {
             if (sensors.hold_front == 1) {
-                  if (sensors.ir_dis == 0 && readms(defenseShootTimer) > BALL_WAIT_TIME + 500) {
-                        motor.Drive(camera.ball_dir * 1.5, moving_speed, camera.ops_goal_dir);
-                        if (sensors.hold_front == 1 && readms(defenseShootTimer) > BALL_WAIT_TIME + 2000) {
-                              kicker.Kick();
-                              defenseShootTimer.reset();
-                              defenseShootTimer.stop();
-                        }
+                  // if (readms(defenseShootTimer) > BALL_WAIT_TIME + 500) {
+                  //       motor.Drive(camera.ball_dir * 1.5, moving_speed, camera.ops_goal_dir);
+                  //       if (sensors.hold_front == 1 && readms(defenseShootTimer) > BALL_WAIT_TIME + 2000) {
+                  //             kicker.Kick();
+                  //             defenseShootTimer.reset();
+                  //             defenseShootTimer.stop();
+                  //       }
+                  // } else {
+                  //       if (abs(sensors.ir_dir) < 10) {
+                  //             motor.Brake(100);
+                  //             kicker.Kick();
+                  //             defenseShootTimer.reset();
+                  //             defenseShootTimer.stop();
+                  //       }
+                  //       motor.Drive(0, 0, sensors.ir_dir, FRONT, 20);
+                  // }
+                  if (sensors.is_on_line) {
+                        motor.Drive(0, moving_speed);
+                  } else if (bt.is_ally_catch_ball == 1) {
+                        kicker.Kick();
                   } else {
-                        if (abs(sensors.ir_dir) < 10) {
-                              motor.Brake(100);
-                              kicker.Kick();
-                              defenseShootTimer.reset();
-                              defenseShootTimer.stop();
-                        }
-                        motor.Drive(0, 0, sensors.ir_dir, FRONT, 20);
+                        esp32.is_defense = 0;
                   }
             } else {
-                  motor.Drive(camera.ball_dir * 2, 30);
-                  if (readms(defenseShootTimer) > BALL_WAIT_TIME + 2500) {
+                  motor.Drive(camera.ball_dir * 2, 50);
+                  if (readms(defenseShootTimer) > BALL_WAIT_TIME + 2000) {
                         defenseShootTimer.reset();
                         defenseShootTimer.stop();
                   }
             }
-            /*
-            if (readms(defenseShootTimer) < BALL_WAIT_TIME + GO_TO_GOAL_TIME) {
-                  if (readms(defenseShootTimer) > 2250) {
-                        if (sensors.is_on_line == 1) {
-                              motor.Drive(sensors.line_inside_dir, line_moving_speed);
-                        } else if (sensors.is_line_left == 1) {
-                              motor.Drive(90, line_moving_speed);
-                        } else if (sensors.is_line_right == 1) {
-                              motor.Drive(-90, line_moving_speed);
-                        } else {
-                              motor.Drive(camera.ball_dir * 1.5, moving_speed, camera.ops_goal_dir);
-                        }
-                  } else {
-                        motor.Drive(camera.ball_dir * 1.5, moving_speed, camera.ops_goal_dir);
-                  }
-                  if (sensors.hold_front == 1 && readms(defenseShootTimer) > 2500) kicker.Kick();
-            } else {
-                  defenseShootTimer.reset();
-                  defenseShootTimer.stop();
-            }*/
       } else {
             if (sensors.is_on_line == 1) {
                   LineTrace();

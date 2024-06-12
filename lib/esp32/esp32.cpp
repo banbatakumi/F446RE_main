@@ -36,10 +36,11 @@ void Esp32::Receive() {
                   can_ally_get_pass = (recv_data[3] >> 4) & 1;
 
                   // 送信
-                  do_rorate = abs(*own_dir) < 35 ? 1 : 0;
+                  do_rorate = abs(*own_dir) < 35 && enable_rorate == 1 ? 1 : 0;
                   is_moving = *mode != 0 ? 1 : 0;
-                  send_byte = can_get_pass << 5 | is_catch_ball << 4 | is_defense << 3 | is_moving << 2 | on_ir_led << 1 | do_rorate;
+                  send_byte = do_top_yaw_correction << 6 | can_get_pass << 5 | is_catch_ball << 4 | is_defense << 3 | is_moving << 2 | on_ir_led << 1 | do_rorate;
                   serial.write(&send_byte, 1);
+                  do_top_yaw_correction = 0;
             }
 
             data_length = 0;
@@ -47,6 +48,7 @@ void Esp32::Receive() {
             recv_data[data_length - 1] = read_byte;
             data_length++;
       }
+      // serial.read(&pc_command, 1);
 }
 
 void Esp32::OnIrLed() {
@@ -55,4 +57,12 @@ void Esp32::OnIrLed() {
 
 void Esp32::OffIrLed() {
       on_ir_led = 0;
+}
+
+void Esp32::TopYawSetZero() {
+      do_top_yaw_correction = 1;
+}
+
+void Esp32::EnableRorate(bool enable_) {
+      enable_rorate = enable_;
 }
