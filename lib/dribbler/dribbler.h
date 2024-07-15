@@ -1,9 +1,10 @@
 #ifndef MBED_DRIBBLER_H
 #define MBED_DRIBBLER_H
 
-#include "mbed.h"
-#include "moving_ave.h"
 #include "FastPWM.h"
+#include "mbed.h"
+
+#define RC 0.99
 class Dribbler {
      public:
       Dribbler(PinName motor_a_, PinName motor_b_);
@@ -16,9 +17,9 @@ class Dribbler {
       void Brake(uint16_t brake_time_ = 0);
 
      private:
-      MovingAve motorAve;
       FastPWM motor_a;
       DigitalOut motor_b;
+      float speed, rc_speed;
 };
 
 #endif

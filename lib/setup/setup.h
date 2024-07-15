@@ -17,7 +17,7 @@
 #define PI 3.1415926535  // 円周率
 
 // 通信速度: 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define UI_UART_SPEED 57600
+#define UI_UART_SPEED 19200
 
 #define HOLD_MAX_POWER 100
 #define HOLD_WAIT_POWER 75
@@ -48,9 +48,12 @@ Hold holdFront(PC_4);
 Hold holdBack(PC_5);
 Kicker kicker(PC_0, PC_1);
 Esp32 esp32(PC_12, PD_2, &own_dir, &mode, 115200);  // TX, RX
-Cam cam(PA_0, PA_1, &own_dir, 230400);
+Cam cam(PA_0, PA_1, &own_dir, 115200);
 Imu imu(PA_9, PA_10, 115200);
 Line line(PA_2, PA_3, 230400);
+
+PID wrapDirPID;
+PID wrapSpeedPID;
 
 DigitalOut led[2] = {PA_5, PA_6};
 typedef struct {
@@ -65,7 +68,6 @@ typedef struct {
       uint8_t ops_goal_size;
       int16_t own_goal_dir;
       uint8_t own_goal_size;
-      int16_t enemy_dir;
       bool is_goal_front;
       int16_t ball_x;
       int16_t ball_y;
@@ -75,6 +77,10 @@ typedef struct {
       int16_t own_y;
       int16_t center_dir;
       int16_t center_dis;
+      uint8_t front_proximity[7];
+      uint8_t right_proximity[7];
+      uint8_t back_proximity[7];
+      uint8_t left_proximity[7];
 } type_camera;
 
 typedef struct {

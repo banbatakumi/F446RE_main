@@ -7,9 +7,7 @@
 // #include "light_offense_mode.h"
 #include "setup.h"
 
-uint8_t speed;
-
-Timer test;
+Timer changeTimer;
 
 void ModeRun() {
       voltage.Read();
@@ -41,34 +39,46 @@ void ModeRun() {
             if (bt.is_connect_to_ally) {
                   if (esp32.is_defense == 0) {
                         OffenseMove();
-                        if (bt.is_ally_defense == 0) esp32.is_defense = 1;
+                        changeTimer.start();
+                        if (readms(changeTimer) > 1000 && bt.is_ally_defense == 0) {
+                              changeTimer.stop();
+                              changeTimer.reset();
+                              esp32.is_defense = 1;
+                        }
                   } else {
+                        esp32.is_defense = 1;
                         DefenseMove();
                   }
             } else {
                   DefenseMove();
             }
       } else if (mode == 3) {
-            // if (esp32.pc_command == 'w') {
-            //       motor.Drive(0, speed);
-            // } else if (esp32.pc_command == 's') {
-            //       motor.Drive(180, speed);
-            // } else if (esp32.pc_command == 'a') {
-            //       motor.Drive(-90, speed);
-            // } else if (esp32.pc_command == 'd') {
-            //       motor.Drive(90, speed);
-            // } else if (esp32.pc_command == 'l') {
-            //       kicker.Kick();
-            // } else if (esp32.pc_command == 'i') {
-            //       speed = 30;
-            // } else if (esp32.pc_command == 'o') {
-            //       speed = 60;
-            // } else if (esp32.pc_command == 'p') {
-            //       speed = 90;
+            // if (esp32.moving == 1) {
+            //       motor.Drive(0, esp32.speed);
+            // } else if (esp32.moving == 2) {
+            //       motor.Drive(45, esp32.speed);
+            // } else if (esp32.moving == 3) {
+            //       motor.Drive(90, esp32.speed);
+            // } else if (esp32.moving == 4) {
+            //       motor.Drive(135, esp32.speed);
+            // } else if (esp32.moving == 5) {
+            //       motor.Drive(180, esp32.speed);
+            // } else if (esp32.moving == 6) {
+            //       motor.Drive(-135, esp32.speed);
+            // } else if (esp32.moving == 7) {
+            //       motor.Drive(-90, esp32.speed);
+            // } else if (esp32.moving == 8) {
+            //       motor.Drive(-45, esp32.speed);
             // } else {
             //       motor.Drive();
             // }
-            motor.Drive(0, 30);
+            // if (esp32.do_kick) kicker.Kick();
+            // if (esp32.do_dribble) {
+            //       dribblerFront.Hold(90);
+            // } else {
+            //       dribblerFront.Hold(0);
+            // }
+            kicker.Discharge();
       }
 }
 
@@ -87,7 +97,6 @@ void GetSensors() {
       camera.ops_goal_size = cam.ops_goal_size;
       camera.own_goal_dir = cam.own_goal_dir;
       camera.own_goal_size = cam.own_goal_size;
-      camera.enemy_dir = cam.enemy_dir;
       camera.is_goal_front = cam.is_goal_front;
       camera.ball_x = cam.GetBallX();
       camera.ball_y = cam.GetBallY();
@@ -97,6 +106,20 @@ void GetSensors() {
       camera.own_y = cam.GetOwnY();
       camera.center_dir = cam.GetCenterDir();
       camera.center_dis = cam.GetCenterDis();
+      camera.front_proximity[0] = cam.front_proximity >> 6 & 1;
+      camera.front_proximity[1] = cam.front_proximity >> 5 & 1;
+      camera.front_proximity[2] = cam.front_proximity >> 4 & 1;
+      camera.front_proximity[3] = cam.front_proximity >> 3 & 1;
+      camera.front_proximity[4] = cam.front_proximity >> 2 & 1;
+      camera.front_proximity[5] = cam.front_proximity >> 1 & 1;
+      camera.front_proximity[6] = cam.front_proximity & 1;
+      camera.back_proximity[0] = cam.back_proximity >> 6 & 1;
+      camera.back_proximity[1] = cam.back_proximity >> 5 & 1;
+      camera.back_proximity[2] = cam.back_proximity >> 4 & 1;
+      camera.back_proximity[3] = cam.back_proximity >> 3 & 1;
+      camera.back_proximity[4] = cam.back_proximity >> 2 & 1;
+      camera.back_proximity[5] = cam.back_proximity >> 1 & 1;
+      camera.back_proximity[6] = cam.back_proximity & 1;
 
       sensors.ir_dir = esp32.ir_dir;
       sensors.ir_dis = esp32.ir_dis;
@@ -131,6 +154,7 @@ void Ui() {
 
       static uint8_t dribbler_sig = 0;
       static bool is_own_dir_correction = 0;
+      static uint8_t dir_correction_cnt;
 
       static uint8_t data_length;
       const uint8_t recv_data_num = 5;
@@ -154,6 +178,7 @@ void Ui() {
                   moving_speed = recv_data[3];
                   line_moving_speed = recv_data[4];
 
+                  if (mode > 3) mode = 0;
                   if (mode != 0 || item == 1) {
                         line.LedOn();
                   } else {
@@ -162,8 +187,14 @@ void Ui() {
 
                   if (mode == 0 || mode == 3) {
                         if (is_own_dir_correction == 1) {
+                              dir_correction_cnt++;
+                        } else {
+                              dir_correction_cnt = 0;
+                        }
+                        if (dir_correction_cnt > 2) {
                               esp32.TopYawSetZero();
                               imu.YawSetZero();
+                              dir_correction_cnt = 0;
                         }
                         if (item == 3) {
                               esp32.OnIrLed();
@@ -186,10 +217,10 @@ void Ui() {
                               send_byte[0] = sensors.hold_front << 1 | sensors.hold_back;
                         } else if (item == 0) {
                               int16_t debug_val[4];
-                              debug_val[0] = sensors.encoder_val[0];
-                              debug_val[1] = sensors.encoder_val[1];
-                              debug_val[2] = sensors.encoder_val[2];
-                              debug_val[3] = sensors.encoder_val[3];
+                              debug_val[0] = holdFront.GetVal();
+                              debug_val[1] = camera.own_y;
+                              debug_val[2] = camera.front_proximity[5];
+                              debug_val[3] = camera.front_proximity[6];
 
                               send_byte_num = 11;
                               send_byte[1] = uint8_t(voltage.Get() * 20);
@@ -222,11 +253,13 @@ void Ui() {
                                     send_byte[3] = camera.b_goal_dir / 2 + 90;
                                     send_byte[4] = camera.b_goal_size;
                               } else {
-                                    send_byte_num = 5;
+                                    send_byte_num = 7;
                                     send_byte[1] = camera.center_dir / 2 + 90;
                                     send_byte[2] = camera.center_dis;
                                     send_byte[3] = camera.own_x + 100;
                                     send_byte[4] = camera.own_y + 100;
+                                    send_byte[5] = cam.front_proximity;
+                                    send_byte[6] = cam.back_proximity;
                               }
                         } else if (item == 3) {
                               send_byte_num = 3;

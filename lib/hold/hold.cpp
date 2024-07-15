@@ -16,9 +16,13 @@ uint8_t Hold::GetVal() {
 }
 
 bool Hold::IsHold() {
-      bool is_catch = 0;
-      if (rc_val < th) is_catch = 1;  // キャッチしたかの判定
-
+      bool is_catch = 1;
+      if (rc_val > th) {
+            if (off_cnt < 100) off_cnt++;
+      } else {
+            off_cnt = 0;
+      }
+      if (off_cnt >= 100) is_catch = 0;
       return is_catch;
 }
 

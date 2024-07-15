@@ -1,21 +1,13 @@
-#include "sin_cos_table.h"
+#include "my_math.h"
 
 float MySin(int theta_) {
       float ret;
       int theta_cal;
-      while (theta_ < 0) {
-            theta_ += 360;
-      }
-      if (theta_ >= 360) {
-            theta_ = theta_ % 360;   // 余り=0~359の数値
-      }
+      while (theta_ < 0) theta_ += 360;
+      if (theta_ >= 360) theta_ = theta_ % 360;  // 余り=0~359の数値
       theta_cal = theta_ % 90;
-      if (theta_ >= 90 && theta_ < 180) {
-            theta_cal = 90 - theta_cal;
-      }
-      if (theta_ >= 270 && theta_ < 360) {
-            theta_cal = 90 - theta_cal;
-      }
+      if (theta_ >= 90 && theta_ < 180) theta_cal = 90 - theta_cal;
+      if (theta_ >= 270 && theta_ < 360) theta_cal = 90 - theta_cal;
 
       if (theta_cal == 0) {
             ret = SIN0;
@@ -218,19 +210,11 @@ float MySin(int theta_) {
 float MyCos(int theta_) {
       float ret;
       int theta_cal;
-      while (theta_ < 0) {
-            theta_ += 360;
-      }
-      if (theta_ >= 360) {
-            theta_ = theta_ % 360;   // 余り=0~359の数値
-      }
+      while (theta_ < 0) theta_ += 360;
+      if (theta_ >= 360) theta_ = theta_ % 360;  // 余り=0~359の数値
       theta_cal = theta_ % 90;
-      if (theta_ >= 90 && theta_ < 180) {
-            theta_cal = 90 - theta_cal;
-      }
-      if (theta_ >= 270 && theta_ < 360) {
-            theta_cal = 90 - theta_cal;
-      }
+      if (theta_ >= 90 && theta_ < 180) theta_cal = 90 - theta_cal;
+      if (theta_ >= 270 && theta_ < 360) theta_cal = 90 - theta_cal;
 
       if (theta_cal == 0) {
             ret = COS0;
@@ -428,4 +412,62 @@ float MyCos(int theta_) {
             // 271~360
       }
       return ret;
+}
+
+int MyAtan2(int y_, int x_) {
+      int x = abs(x_);
+      int y = abs(y_);
+      float z;
+      bool c;
+      float a;
+
+      if (x_ == 0 && y_ == 0) {
+            a = 0;
+      } else if (x_ == 0) {
+            if (y_ > 0) {
+                  a = 0;
+            } else {
+                  a = 180;
+            }
+      } else if (y_ == 0) {
+            if (x_ > 0) {
+                  a = 90;
+            } else {
+                  a = -90;
+            }
+      } else {
+            c = y < x;
+            if (c) {
+                  z = (float)y / x;
+            } else {
+                  z = (float)x / y;
+            }
+
+            // a = z * (-1556 * z + 6072);                     //2次曲線近似
+            a = z * (z * (-448 * z - 954) + 5894) * 0.01;  // 3次曲線近似
+            // a = z * (z * (z * (829 * z - 2011) - 58) + 5741);  // 4次曲線近似
+
+            if (c) {
+                  if (x_ > 0) {
+                        if (y_ < 0) a *= -1;
+                  }
+                  if (x_ < 0) {
+                        if (y_ > 0) a = 180 - a;
+                        if (y_ < 0) a = a - 180;
+                  }
+            }
+
+            if (!c) {
+                  if (x_ > 0) {
+                        if (y_ > 0) a = 90 - a;
+                        if (y_ < 0) a = a - 90;
+                  }
+                  if (x_ < 0) {
+                        if (y_ > 0) a = a + 90;
+                        if (y_ < 0) a = -a - 90;
+                  }
+            }
+      }
+
+      return a;
 }

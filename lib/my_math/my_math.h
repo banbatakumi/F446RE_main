@@ -1,5 +1,7 @@
-#ifndef MYSINCOSTABLE
-#define MYSINCOSTABLE
+#ifndef MY_MATH
+#define MY_MATH
+
+#define abs(x) ((x) > 0 ? (x) : -(x))
 
 #define SIN0 0
 #define SIN1 0.0174524064372835
@@ -188,4 +190,7 @@
 
 float MySin(int theta_);
 float MyCos(int theta_);
+
+int MyAtan2(int y_, int x_);
+
 #endif

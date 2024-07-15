@@ -6,6 +6,8 @@
 #define PI 3.1415926535  // 円周率
 #define SENSOR_QTY 4
 
+#define MAIN
+
 class Esp32 {
      public:
       Esp32(PinName tx_, PinName rx_, float* own_dir_, uint8_t* mode_, uint32_t serial_baud_);
@@ -28,7 +30,10 @@ class Esp32 {
       bool is_defense;
       bool is_catch_ball;
       bool can_get_pass;
-      char pc_command;
+
+      uint8_t moving;
+      uint8_t speed;
+      bool do_kick, do_dribble;
 
      private:
       UnbufferedSerial serial;

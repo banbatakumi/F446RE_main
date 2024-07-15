@@ -27,10 +27,10 @@ void PID::SelectType(uint8_t type_) {
 
 void PID::Compute(float input_, float target_) {
       if (readms(sampling_timer) > sampling_period) {
-            if (type == 0) {                                                  // 普通のやつ
-                  p = target_ - input_;                                       // 比例
-                  d = (p - pre_p) / (readms(sampling_timer) / 1000.0f);       // 微分
-                  i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) / 2;  // 積分
+            if (type == 0) {                                                    // 普通のやつ
+                  p = target_ - input_;                                         // 比例
+                  d = (p - pre_p) / (readms(sampling_timer) / 1000.0f);         // 微分
+                  i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) * 0.5;  // 台形積分
                   if ((i > 0 && input_ > 0) || (i < 0 && input_ < 0)) i = 0;
                   if (abs(i) > limit) i = limit * (i / abs(i));
                   pre_p = p;
@@ -39,7 +39,7 @@ void PID::Compute(float input_, float target_) {
             } else if (type == 1) {                                               // 微分先行型
                   p = target_ - input_;                                           // 比例
                   d = (input_ - pre_input) / (readms(sampling_timer) / 1000.0f);  // 微分
-                  i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) / 2;      // 積分
+                  i += (p + pre_p) * (readms(sampling_timer) / 1000.0f) * 0.5;    // 台形積分
                   if ((i > 0 && input_ > 0) || (i < 0 && input_ < 0)) i = 0;
                   if (abs(i) > limit) i = limit * (i / abs(i));
                   pre_p = p;

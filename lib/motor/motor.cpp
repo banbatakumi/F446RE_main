@@ -62,13 +62,13 @@ void Motor::Drive(int16_t moving_dir_, uint16_t moving_speed_, int16_t robot_ang
             if (abs(power[i]) >= 10 && readms(addPowerTimer) < 100) {
                   d = abs(encoder_val[i] - abs(corrected_power[i]) / (100.0f / BASE_POWER));  // 指定速度と実際の速度の差
                   if (encoder_val[i] <= abs(corrected_power[i]) / (100.0f / BASE_POWER)) {
-                        add_power[i] += (d + pre_d) * readus(addPowerTimer) / 2 * ENCODER_GAIN;  // 台形積分
+                        add_power[i] += (d + pre_d) * readus(addPowerTimer) * 0.5 * ENCODER_GAIN;  // 台形積分
                         add_power_limit = POWER_MAX_LIMIT - abs(power[i]);
                         if (add_power_limit > MAX_ADD_POWER) add_power_limit = MAX_ADD_POWER;  // 加算する速度が上がりすぎないように補正
                         if (add_power[i] > add_power_limit) add_power[i] = add_power_limit;    // 加算後の速度が100を超えないように補正
                   } else {
-                        add_power[i] -= (d + pre_d) * readus(addPowerTimer) / 2 * ENCODER_GAIN;  // 台形積分
-                        if (add_power[i] < MIN_ADD_POWER) add_power[i] = MIN_ADD_POWER;          // 加算する速度が下がりすぎないように補正
+                        add_power[i] -= (d + pre_d) * readus(addPowerTimer) * 0.5 * ENCODER_GAIN;  // 台形積分
+                        if (add_power[i] < MIN_ADD_POWER) add_power[i] = MIN_ADD_POWER;            // 加算する速度が下がりすぎないように補正
                   }
                   pre_d = d;
             } else {

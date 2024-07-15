@@ -19,6 +19,8 @@ class Hold {
       uint8_t val;
       uint8_t rc_val;
 
+      uint8_t off_cnt;
+
       uint16_t th;
 };
 

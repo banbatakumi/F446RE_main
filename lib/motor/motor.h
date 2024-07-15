@@ -4,9 +4,9 @@
 #include "FastPWM.h"
 #include "mbed.h"
 #include "moving_ave.h"
+#include "my_math.h"
 #include "pid.h"
 #include "simplify_deg.h"
-#include "sin_cos_table.h"
 
 #define PI 3.1415926535  // 円周率
 
@@ -17,8 +17,8 @@
 #define MOTOR_3_DEGREE 315
 
 #define BASE_POWER 10
-#define ENCODER_GAIN 0.00007
-#define MAX_ADD_POWER 50
+#define ENCODER_GAIN 0.0001
+#define MAX_ADD_POWER 75
 #define MIN_ADD_POWER 0
 
 #define POWER_MAX_LIMIT 99

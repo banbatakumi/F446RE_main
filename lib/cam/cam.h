@@ -3,8 +3,8 @@
 
 #include "mbed.h"
 #include "moving_ave.h"
+#include "my_math.h"
 #include "simplify_deg.h"
-#include "sin_cos_table.h"
 
 #define PI 3.1415926535  // 円周率
 #define SAMPLE_CYCLE 50ms
@@ -43,7 +43,10 @@ class Cam {
 
       int8_t court_own_x, court_own_y;
 
-      int16_t enemy_dir;
+      uint8_t front_proximity;
+      uint8_t right_proximity;
+      uint8_t back_proximity;
+      uint8_t left_proximity;
 
       bool is_goal_front;
 

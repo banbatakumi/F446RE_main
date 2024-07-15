@@ -16,10 +16,11 @@ Cam::Cam(PinName tx_, PinName rx_, float* own_dir_, uint32_t serial_baud_) : ser
 
 void Cam::Receive() {
       static uint8_t data_length;  // データの長さ
-      const uint8_t recv_data_num = 11;
+      const uint8_t recv_data_num = 12;
       static uint8_t recv_data[recv_data_num];
       static uint8_t ball_dir_H, ball_dir_L;
       uint8_t read_byte;
+      uint8_t send_byte;
       serial.read(&read_byte, 1);
 
       if (data_length == 0) {  // ヘッダ（C）の受信
@@ -38,10 +39,11 @@ void Cam::Receive() {
                   yellow_goal_size = recv_data[4];
                   blue_goal_dir = recv_data[5] * 2 - 180;
                   blue_goal_size = recv_data[6];
-                  enemy_dir = recv_data[7];
-                  court_own_x = recv_data[8] - 127;
-                  court_own_y = recv_data[9] - 127;
-                  if (recv_data[10] == 1) {
+                  front_proximity = recv_data[7];
+                  back_proximity = recv_data[8];
+                  court_own_x = recv_data[9] - 127;
+                  court_own_y = recv_data[10] - 127;
+                  if (recv_data[11] == 1) {
                         if (goal_front_count > 15) {
                               is_goal_front = 1;
                         } else {
@@ -53,9 +55,9 @@ void Cam::Receive() {
                   }
 
                   // 自ゴールと敵ゴールがそれぞれ青か黄かの自動判定
-                  if (abs(SimplifyDeg(yellow_goal_dir + *own_dir)) <= 90 && abs(SimplifyDeg(blue_goal_dir + *own_dir)) >= 90) {
+                  if (abs(yellow_goal_dir) <= 90 && abs(blue_goal_dir) >= 90) {
                         is_front_goal_yellow = 1;
-                  } else if (abs(SimplifyDeg(yellow_goal_dir + *own_dir)) >= 90 && abs(SimplifyDeg(blue_goal_dir + *own_dir)) <= 90) {
+                  } else if (abs(yellow_goal_dir) >= 90 && abs(blue_goal_dir) <= 90) {
                         is_front_goal_yellow = 0;
                   }
 
@@ -71,9 +73,9 @@ void Cam::Receive() {
                         own_goal_size = yellow_goal_size;
                   }
 
-                  if (enemy_dir != 0) enemy_dir = SimplifyDeg(enemy_dir - 45 + *own_dir);
+                  send_byte = *own_dir * 0.5 + 90;
+                  serial.write(&send_byte, 1);
             }
-
             data_length = 0;
       } else {
             recv_data[data_length - 1] = read_byte;
@@ -119,13 +121,13 @@ int16_t Cam::GetOwnX() {
       if (ops_goal_size != 0 && own_goal_size != 0) {
             if (abs(*own_dir) < 30) {
                   own_x = (100 - ops_goal_size) * MySin(ops_goal_dir) + (100 - own_goal_size) * MySin(own_goal_dir);
-                  own_x /= -2;
-                  own_x = (own_x + court_own_x) / 2;
+                  own_x *= -0.5;
+                  own_x = (own_x + court_own_x) * 0.5;
             } else {
                   own_x = (100 - ops_goal_size) * MySin(ops_goal_dir) + (100 - own_goal_size) * MySin(own_goal_dir);
-                  own_x /= -2;
+                  own_x *= -0.5;
             }
-      } else if (abs(*own_dir) < 30) {
+      } else {
             own_x = court_own_x;
       }
       return own_x;
@@ -136,13 +138,13 @@ int16_t Cam::GetOwnY() {
       if (ops_goal_size != 0 && own_goal_size != 0) {
             if (abs(*own_dir) < 30) {
                   own_y = (100 - ops_goal_size) * MyCos(ops_goal_dir) + (100 - own_goal_size) * MyCos(own_goal_dir);
-                  own_y /= -2;
-                  own_y = (own_y + court_own_y) / 2;
+                  own_y *= -0.5;
+                  own_y = (own_y + court_own_y) * 0.5;
             } else {
                   own_y = (100 - ops_goal_size) * MyCos(ops_goal_dir) + (100 - own_goal_size) * MyCos(own_goal_dir);
-                  own_y /= -2;
+                  own_y *= -0.5;
             }
-      } else if (abs(*own_dir) < 30) {
+      } else {
             own_y = court_own_y;
       }
       return own_y;
@@ -154,6 +156,6 @@ int16_t Cam::GetCenterDir() {
 }
 
 int16_t Cam::GetCenterDis() {
-      int16_t center_dis = abs(sqrt(pow(GetOwnX(), 2) + pow(GetOwnY(), 2)));
+      int16_t center_dis = abs(sqrt(GetOwnX() * GetOwnX() + GetOwnY() * GetOwnY()));
       return center_dis;
 }

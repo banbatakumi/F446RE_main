@@ -103,7 +103,6 @@ void DefenseMove() {
                   defenseShootTimer.stop();
             }
       } else {
-            ultrasonic.OffIrLed();
             if (sensors.is_on_line == 1) {
                   LineTrace();
             } else {
@@ -112,9 +111,7 @@ void DefenseMove() {
 
                   if (camera.own_goal_size > 75) {
                         motor.Drive(0, moving_speed);
-                  } else if (sensors.dis[2] < 15) {
-                        motor.Drive(-90 * abs(camera.own_x) / camera.own_x, 50);
-                  } else if (sensors.dis[2] < 40) {
+                  } else if (camera.own_y < -20) {
                         motor.Drive(camera.own_goal_dir, 50);
                   } else {
                         motor.Drive(camera.own_goal_dir, moving_speed);

@@ -24,31 +24,21 @@ int16_t tmp_moving_dir, tmp_moving_speed, robot_dir;
 void WrapToFront() {
       int16_t wrap_deg_addend;
       // 角度
-      if (abs(sensors.ir_dir) < 45) {
-            wrap_deg_addend = sensors.ir_dir * (abs(sensors.ir_dir) / 22.5f);
+      if (abs(sensors.ir_dir) < 60) {
+            wrap_deg_addend = sensors.ir_dir * 1.5;
       } else {
             wrap_deg_addend = 90 * (abs(sensors.ir_dir) / sensors.ir_dir);
       }
-      tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend * pow((sensors.ir_dis / DEPTH_OF_WRAP), DISTORTION_OF_WRAP));
-
-      if (abs(sensors.ir_dir) < 10) wrapTimer.start();
-      if (abs(sensors.ir_dir) > 30) {
-            wrapTimer.reset();
-            wrapTimer.stop();
-      }
+      tmp_moving_dir = sensors.ir_dir + (wrap_deg_addend);
 
       // 速度
       wrapDirPID.Compute(sensors.ir_dir, 0);
 
-      if (sensors.ir_dis < 80 || readms(wrapTimer) > 100) {
-            tmp_moving_speed = moving_speed;
-      } else if ((camera.ops_goal_size > 40 && abs(tmp_moving_dir) < 45) || (camera.own_goal_size > 40 && abs(tmp_moving_dir) > 135) || (camera.own_x > 30 && tmp_moving_dir > 45 && tmp_moving_dir < 135) || (camera.own_x < -30 && tmp_moving_dir < -45 && tmp_moving_dir > -135)) {
-            tmp_moving_speed = 50;
-      } else {
-            tmp_moving_speed = abs(wrapDirPID.Get());
-      }
+      tmp_moving_speed = moving_speed;
 
       if (tmp_moving_speed > moving_speed) tmp_moving_speed = moving_speed;
+
+      robot_dir = camera.ops_goal_dir;
 
       motor.Drive(tmp_moving_dir, tmp_moving_speed, robot_dir);
 }
@@ -61,7 +51,7 @@ void LineMove() {
       float vector_x, vector_y, vector_mag, vector_dir;
       float line_vector_rate, ball_vector_rate;
 
-      if (abs(sensors.ir_dir + own_dir) < 90 && readms(lineStopTimer) > 500 && abs(sensors.line_inside_dir + own_dir) > 135 && sensors.dis[0] >= 10) {  // ラインを割る
+      if (abs(sensors.ir_dir) < 90 && readms(lineStopTimer) > 500 && abs(sensors.line_inside_dir + own_dir) > 135) {  // ラインを割る
             line_vector_rate = 0.4;
             ball_vector_rate = 0.6;
       } else {  // 通常待機
@@ -114,36 +104,15 @@ void LineMove() {
       }
 }
 
-void goToCenter() {
-      if (!IS_OPS_GOAL_FOUND || !IS_OWN_GOAL_FOUND) {
-            if (sensors.dis[0] > sensors.dis[2]) {
-                  if (sensors.dis[1] > sensors.dis[3]) {
-                        tmp_moving_dir = 45;
-                  } else {
-                        tmp_moving_dir = -45;
-                  }
-            } else {
-                  if (sensors.dis[1] > sensors.dis[3]) {
-                        tmp_moving_dir = 135;
-                  } else {
-                        tmp_moving_dir = -135;
-                  }
-            }
-            motor.Drive(tmp_moving_dir, abs(sensors.dis[0] - sensors.dis[2]) + abs(sensors.dis[1] - sensors.dis[3]));
-      } else {
-            motor.Drive(camera.center_dir, camera.center_dis * 10);
-      }
-}
-
 void OffenseMove() {
       robot_dir = camera.ops_goal_dir;
-      if (abs(robot_dir) > 60) robot_dir = 60 * (abs(robot_dir) / robot_dir);
+      if (abs(robot_dir) > 30) robot_dir = 30 * (abs(robot_dir) / robot_dir);
       if (sensors.is_on_line == 1 || ((sensors.is_line_left == 1 || sensors.is_line_right == 1) && motor.GetPreMovingSpeed() > 50 && abs(motor.GetPreMovingDir()) > 45 && abs(motor.GetPreMovingDir()) < 135)) {  // ラインセンサの処理
             LineMove();
       } else if (sensors.ir_dis == 0) {  // ボールがない時の処理
             goToCenterTimer.start();
             if (readms(goToCenterTimer) > 1000) {
-                  goToCenter();
+                  motor.Drive(camera.center_dir, camera.center_dis * 10);
             } else {
                   motor.Drive();
             }
